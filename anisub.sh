@@ -54,7 +54,7 @@ NC='\033[0m' # Không màu    # Có thể thay đổi tùy ý
 # Source bên dưới không được chỉnh sửa nếu không nắm rõ về code!!! @Kidtomboy
 
 # ============================ COOLDOWN THÔNG BÁO ============================
-LAST_NOTIFICATION_TIME=2 		            # Tăng thời gian Cooldown nếu cần
+LAST_NOTIFICATION_TIME=2 		    	# Tăng thời gian Cooldown nếu cần
 NOTIFICATION_COOLDOWN=2 # 2 giây            # Tăng thời gian Cooldown nếu cần
 
 # ============================ KHỞI TẠO THƯ MỤC VÀ FILE CẦN THIẾT ============================
@@ -242,6 +242,13 @@ check_dependencies() {
 # ============================ HÀM LẤY DANH SÁCH ANIME/PHIM TỪ OPHIM ============================
 search_anime_ophim() {
     local keyword="$1"
+    
+    # Kiểm tra độ dài từ khóa
+    if [[ ${#keyword} -lt 3 ]]; then
+        error "Từ khóa tìm kiếm phải có ít nhất 3 ký tự"
+        return 1
+    fi
+
     local cache_file="$CACHE_DIR/ophim_search_${keyword}.cache"
     
     # Kiểm tra cache
@@ -253,22 +260,42 @@ search_anime_ophim() {
         fi
     fi
     
+    notify "Đang tìm kiếm: $keyword..."
+    local search_url="https://ophim17.cc/tim-kiem?keyword=${keyword}"
     local anime_list
-    anime_list=$(curl -s "https://ophim17.cc/tim-kiem?keyword=$keyword" | \             #Hãy thay nếu như có nguồn khác!
-        pup '.ml-4 > a attr{href}' | \
-        awk '{print "https://ophim17.cc" $0}' | \
-        while IFS= read -r link; do
-            local title=$(curl -s "$link" | pup 'h1 text{}' | tr -d '\n')
-            printf '%s\n' "$link@@@$title"
-        done | \
-        awk -F '@@@' '{print NR ". " $2 " (" $1 ")"}')
     
-    # Lưu vào cache
-    if [[ -n "$anime_list" ]]; then
-        echo "$anime_list" > "$cache_file"
+    # Sử dụng timeout cho curl để tránh treo lâu
+    if ! anime_list=$(timeout 20 curl -s "$search_url" | pup '.ml-4 > a attr{href}' 2>/dev/null); then
+        error "Không thể tải dữ liệu tìm kiếm"
+        return 1
     fi
     
-    echo "$anime_list"
+    # Xử lý kết quả tìm kiếm
+    if [[ -z "$anime_list" ]]; then
+        warn "Không tìm thấy anime nào với từ khóa '$keyword'"
+        return 1
+    fi
+
+    # Tạo danh sách anime với thông tin đầy đủ
+    local processed_list=$(echo "$anime_list" | awk '{print "https://ophim17.cc" $0}' | \             #Hãy thay nếu như có nguồn khác!
+        while IFS= read -r link; do
+            local title=$(timeout 20 curl -s "$link" | pup 'h1 text{}' | tr -d '\n' 2>/dev/null)
+            if [[ -z "$title" ]]; then
+                title="Không có tiêu đề"
+            fi
+            printf '%s\n' "$link@@@$title"
+        done | \
+        awk -F '@@@' '{print NR ". " $2 " (" $1 ")"}' 2>/dev/null)
+    
+    # Kiểm tra kết quả xử lý
+    if [[ -z "$processed_list" ]]; then
+        error "Không thể xử lý kết quả tìm kiếm"
+        return 1
+    fi
+    
+    # Lưu vào cache
+    echo "$processed_list" > "$cache_file"
+    echo "$processed_list"
 }
 
 # ============================ HÀM LẤY DANH SÁCH TẬP TỪ OPHIM ============================
@@ -460,6 +487,7 @@ download_video() {
     local url="$1"
     local title="$2"
     local output_dir="$3"
+    local anime_name="$4"
     
     if ! command -v yt-dlp &> /dev/null; then
         error "yt-dlp không được cài đặt. Không thể tải video."
@@ -477,8 +505,58 @@ download_video() {
     
     if [[ $? -eq 0 ]]; then
         notify "Đã tải xong: $title"
+        log "DOWNLOAD" "Tải thành công: $title"
+        
+        # Thêm menu sau khi tải xong
+        while true; do
+            clear
+            echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
+            echo -e "${CYAN}│       ${MAGENTA}TẢI XONG: $title${CYAN}               │${NC}"
+            echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
+            echo -e "${CYAN}│  ${YELLOW}1. Phát video vừa tải${CYAN}                     │${NC}"
+            echo -e "${CYAN}│  ${YELLOW}2. Quay lại phát tập hiện tại${CYAN}             │${NC}"
+            echo -e "${CYAN}│  ${YELLOW}3. Mở thư mục chứa video${CYAN}                 │${NC}"
+            echo -e "${CYAN}│  ${RED}0. Quay lại menu trước${CYAN}                    │${NC}"
+            echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+            
+            read -r -p "Chọn một tùy chọn: " choice
+            
+            case $choice in
+                1)
+                    local video_file=$(find "$output_dir" -name "$title*.mp4" | head -n 1)
+                    if [[ -f "$video_file" ]]; then
+                        play_with_mpv "$video_file" "$title (Đã tải)"
+                        log "PLAY" "Phát video đã tải: $title"
+                    else
+                        error "Không tìm thấy file video đã tải"
+                    fi
+                    ;;
+                2)
+                    # Quay lại phát tập hiện tại
+                    return 2
+                    ;;
+                3)
+                    if command -v xdg-open &> /dev/null; then
+                        xdg-open "$output_dir"
+                    elif command -v open &> /dev/null; then
+                        open "$output_dir"
+                    else
+                        warn "Không thể mở thư mục tự động"
+                        echo "Thư mục chứa video: $output_dir"
+                    fi
+                    ;;
+                0)
+                    return
+                    ;;
+                *)
+                    warn "Lựa chọn không hợp lệ"
+                    ;;
+            esac
+        done
     else
         error "Tải video thất bại"
+        log "ERROR" "Tải video thất bại: $title"
+        return 1
     fi
 }
 
@@ -827,7 +905,11 @@ play_anime_ophim() {
                 play_with_mpv "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
                 ;;
             5)
-                download_video "$episode_url" "$anime_name - Tập $episode_number: $episode_title" "$DOWNLOAD_DIR/$anime_name"
+                download_video "$episode_url" "$anime_name - Tập $episode_number: $episode_title" "$DOWNLOAD_DIR/$anime_name" "$anime_name"
+                if [[ $? -eq 2 ]]; then
+                # Nếu người dùng chọn quay lại phát tập hiện tại
+                play_with_mpv "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
+            fi
                 ;;
             6)
                 add_to_favorites "$anime_name"
@@ -902,7 +984,10 @@ play_anime_anidata() {
                 play_with_mpv "$episode_url" "$anime_name - $episode_title"
                 ;;
             2)
-                download_video "$episode_url" "$anime_name - $episode_title" "$DOWNLOAD_DIR/$anime_name"
+                download_video "$episode_url" "$anime_name - $episode_title" "$DOWNLOAD_DIR/$anime_name" "$anime_name"
+                if [[ $? -eq 2 ]]; then
+                play_with_mpv "$episode_url" "$anime_name - $episode_title"
+            fi
                 ;;
             3)
                 add_to_favorites "$anime_name"
