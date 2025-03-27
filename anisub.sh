@@ -29,8 +29,9 @@ VERSION="Unknown 1337"
 # 4
 # 5
 # 6 
+# 7
 # Ngày nào cũng code sao nhớ nổi T^T
-# END: 28/3/2025 - 2:30
+# END: 28/3/2025 - 4:20
 
 # ============================ CẤU HÌNH CỦA ANISUB ============================
 CONFIG_DIR="$HOME/.config/anisub_cli"           # Có thể thay đổi tùy ý
@@ -53,7 +54,7 @@ NC='\033[0m' # Không màu    # Có thể thay đổi tùy ý
 # Source bên dưới không được chỉnh sửa nếu không nắm rõ về code!!! @Kidtomboy
 
 # ============================ COOLDOWN THÔNG BÁO ============================
-LAST_NOTIFICATION_TIME=0
+LAST_NOTIFICATION_TIME=2 		            # Tăng thời gian Cooldown nếu cần
 NOTIFICATION_COOLDOWN=2 # 2 giây            # Tăng thời gian Cooldown nếu cần
 
 # ============================ KHỞI TẠO THƯ MỤC VÀ FILE CẦN THIẾT ============================
@@ -72,12 +73,17 @@ DEFAULT_SOURCE="ophim"
 MAX_CACHE_AGE=86400 # 1 ngày ( Tình bằng thời gian: giây)
 THEME="dark"
 NOTIFICATIONS=true
+UPDATE_URL="https://raw.githubusercontent.com/kidtomboy/Remake-Anisub/main/anisub.sh"
 EOM
     fi
     
-    # Load cấu hình
     source "$CONFIG_FILE"
+    log "SYSTEM" "Khởi tạo thư mục và file cấu hình"
 }
+
+# ============================ CẤU HÌNH CỦA NHÀ PHÁT TRIỂN ============================
+AUTHORS=("Kidtomboy (Remake)" "NiyakiPham (Original)")
+DONATION_LINK="Ahuhu Cherry chưa muốn nhận Donate :33" 
 
 # ============================ KIỂM TRA THÔNG BÁO ============================
 can_notify() {
@@ -92,9 +98,10 @@ can_notify() {
 # ============================ GHI LOG (NHẬT KÝ) ============================
 log() {
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-    echo "[$timestamp] $1" >> "$LOG_FILE"
+    local log_type="$1"
+    local message="$2"
+    echo "[$timestamp] [$log_type] $message" >> "$LOG_FILE"
 }
-
 # ============================ HIỂN THỊ CÁC THÔNG BÁO ============================
 notify() {
     if [[ "$NOTIFICATIONS" == "true" ]]; then
@@ -105,48 +112,131 @@ notify() {
         fi
     fi
     echo -e "${GREEN}[INFO]${NC} $1"
-    log "$1"
+    log "INFO" "$1"
 }
 
-# Hiển thị cảnh báo (WARN)
 warn() {
     if can_notify; then
         echo -e "${YELLOW}[WARN]${NC} $1" >&2
     fi
-    log "[WARN] $1"
+    log "WARN" "$1"
 }
 
-# Hiển thị lỗi (ERROR - WTF)
 error() {
     if can_notify; then
         echo -e "${RED}[ERROR]${NC} $1" >&2
     fi
-    log "[ERROR] $1"
+    log "ERROR" "$1"
 }
 
-# ============================ KIỂM TRA CÁC GÓI ============================
+# ============================ KIỂM TRA VÀ TỰ ĐỘNG CÀI ĐẶT CÁC GÓI ============================
 check_dependencies() {
-    local missing=()
-    
-    # Các lệnh bắt buộc để cài gói
-    for cmd in curl pup jq fzf mpv; do
-        if ! command -v "$cmd" &> /dev/null; then
-            missing+=("$cmd")
+    local -A pkg_manager=(
+        ["apt"]="sudo apt-get install -y"
+        ["pacman"]="sudo pacman -S --noconfirm"
+        ["dnf"]="sudo dnf install -y"
+        ["yum"]="sudo yum install -y"
+        ["zypper"]="sudo zypper install -y"
+        ["brew"]="brew install"
+    )
+
+    # Xác định trình quản lý gói
+    local manager
+    for m in "${!pkg_manager[@]}"; do
+        if command -v "$m" &>/dev/null; then
+            manager="$m"
+            break
         fi
     done
-    
-    # Các lệnh tùy chọn
-    for cmd in yt-dlp ffmpeg notify-send manga-tui; do
-        if ! command -v "$cmd" &> /dev/null; then
-            warn "$cmd không được tìm thấy, một số tính năng có thể bị hạn chế"
-        fi
-    done
-    
-    if [[ ${#missing[@]} -gt 0 ]]; then
-        error "Thiếu các gói bắt buộc: ${missing[*]}"
-        echo "Vui lòng cài đặt chúng trước khi sử dụng script này."
-        exit 1
+
+    if [[ -z "$manager" ]]; then
+        error "Không thể xác định trình quản lý gói!"
+        return 1
     fi
+
+    # Các gói bắt buộc và package tương ứng
+    local -A required_pkgs=(
+        ["curl"]="curl"
+        ["pup"]="pup"
+        ["jq"]="jq"
+        ["fzf"]="fzf"
+        ["mpv"]="mpv"
+    )
+
+    # Các gói tùy chọn
+    local -A optional_pkgs=(
+        ["yt-dlp"]="yt-dlp"
+        ["ffmpeg"]="ffmpeg"
+        ["notify-send"]="libnotify-bin"  # Trên Debian/Ubuntu
+        # ["manga-tui"]="manga-tui" # Bỏ vì quá phiền phức | Sẽ để dành khi nào có API
+    )
+
+    local missing=()
+    local optional_missing=()
+
+    # Kiểm tra gói bắt buộc
+    for cmd in "${!required_pkgs[@]}"; do
+        if ! command -v "$cmd" &>/dev/null; then
+            missing+=("${required_pkgs[$cmd]}")
+        fi
+    done
+
+    # Kiểm tra gói tùy chọn
+    for cmd in "${!optional_pkgs[@]}"; do
+        if ! command -v "$cmd" &>/dev/null; then
+            optional_missing+=("${optional_pkgs[$cmd]}")
+        fi
+    done
+
+    # Cài đặt các gói bắt buộc
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        warn "Đang cài đặt các gói bắt buộc: ${missing[*]}"
+        
+        # Xử lý đặc biệt cho notify-send trên Arch
+        if [[ "$manager" == "pacman" ]] && [[ " ${missing[@]} " =~ " libnotify-bin " ]]; then
+            missing=("${missing[@]/libnotify-bin/libnotify}")
+        fi
+
+        if ! ${pkg_manager[$manager]} "${missing[@]}"; then
+            error "Không thể cài đặt các gói bắt buộc!"
+            exit 1
+        fi
+        log "SYSTEM" "Đã cài đặt gói bắt buộc: ${missing[*]}"
+    fi
+
+    # Cài đặt các gói tùy chọn
+    if [[ ${#optional_missing[@]} -gt 0 ]]; then
+        warn "Các gói tùy chọn chưa có: ${optional_missing[*]}"
+        read -p "Bạn có muốn cài đặt chúng không? (y/N) (Mặc định là N)" -n 1 -r
+        echo
+       if [[ $REPLY =~ ^[Yy]$ ]]; then
+            # Xử lý đặc biệt cho manga-tui (cần cài qua cargo) # Bỏ vì quá phiền phức | Hứ~
+            #if [[ " ${optional_missing[@]} " =~ " manga-tui " ]]; then
+            #   if command -v cargo &>/dev/null; then
+            #        notify "Đang cài đặt manga-tui qua cargo..."
+            #       cargo install manga-tui
+            #       optional_missing=("${optional_missing[@]/manga-tui}")
+            #    else
+            #       warn "Không tìm thấy cargo, bỏ qua manga-tui"
+            #        optional_missing=("${optional_missing[@]/manga-tui}")
+            #   fi
+            #fi
+
+            # Cài các gói còn lại
+            if [[ ${#optional_missing[@]} -gt 0 ]]; then
+                ${pkg_manager[$manager]} "${optional_missing[@]}" || warn "Có lỗi khi cài gói tùy chọn"
+                log "SYSTEM" "Đã cài đặt gói tùy chọn: ${optional_missing[*]}"
+            fi
+        fi
+    fi
+
+    # Kiểm tra lại sau khi cài đặt
+    for cmd in "${!required_pkgs[@]}"; do
+        if ! command -v "$cmd" &>/dev/null; then
+            error "Không thể cài đặt $cmd, script không thể chạy!"
+            exit 1
+        fi
+    done
 }
 
 # ============================ HÀM LẤY DANH SÁCH ANIME/PHIM TỪ OPHIM ============================
@@ -164,7 +254,7 @@ search_anime_ophim() {
     fi
     
     local anime_list
-    anime_list=$(curl -s "https://ophim17.cc/tim-kiem?keyword=$keyword" | \
+    anime_list=$(curl -s "https://ophim17.cc/tim-kiem?keyword=$keyword" | \             #Hãy thay nếu như có nguồn khác!
         pup '.ml-4 > a attr{href}' | \
         awk '{print "https://ophim17.cc" $0}' | \
         while IFS= read -r link; do
@@ -245,7 +335,7 @@ get_episode_title() {
 # ============================ HÀM LẤY DANH SÁCH ANIME/PHIM TỪ ANIDATA (@NiyakiPham QUẢN LÝ) ============================
 get_anime_list_anidata() {
     local cache_file="$CACHE_DIR/anidata_list.cache"
-    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"
+    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"             #Hãy thay nếu như có nguồn khác!
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
@@ -268,7 +358,7 @@ get_anime_list_anidata() {
 get_episode_list_anidata() {
     local anime_name="$1"
     local cache_file="$CACHE_DIR/anidata_episodes_$(echo "$anime_name" | md5sum | cut -d' ' -f1).cache"
-    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"
+    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"            #Hãy thay nếu như có nguồn khác!
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
@@ -541,20 +631,55 @@ main_menu() {
         echo -e "${CYAN}│  ${YELLOW}4. Công cụ video (cắt/ghép)${CYAN}                 │${NC}"
         echo -e "${CYAN}│  ${YELLOW}5. Đọc manga${CYAN}                                │${NC}"
         echo -e "${CYAN}│  ${YELLOW}6. Cài đặt${CYAN}                                  │${NC}"
+        echo -e "${CYAN}│  ${YELLOW}7. Kiểm tra cập nhật${CYAN}                        │${NC}"
+        echo -e "${CYAN}│  ${YELLOW}8. Thông tin tác giả${CYAN}                        │${NC}"
         echo -e "${CYAN}│  ${RED}0. Thoát${CYAN}                                      │${NC}"
         echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
         
         read -r -p "Chọn một tùy chọn: " choice
         
         case $choice in
-            1) search_and_play_menu ;;
-            2) history_menu ;;
-            3) favorites_menu ;;
-            4) video_tools_menu ;;
-            5) read_manga ;;
-            6) settings_menu ;;
-            0) exit 0 ;;
-            *) warn "Lựa chọn không hợp lệ, vui lòng chọn lại" ;;
+            1) 
+                log "MENU" "Vào menu Tìm kiếm và phát anime"
+                search_and_play_menu 
+                ;;
+            2) 
+                log "MENU" "Vào menu Lịch sử xem"
+                history_menu 
+                ;;
+            3) 
+                log "MENU" "Vào menu Danh sách yêu thích"
+                favorites_menu 
+                ;;
+            4) 
+                log "MENU" "Vào menu Công cụ video"
+                video_tools_menu 
+                ;;
+            5) 
+                log "MENU" "Vào menu Đọc manga"
+                read_manga 
+                ;;
+            6) 
+                log "MENU" "Vào menu Cài đặt"
+                settings_menu 
+                ;;
+            7) 
+                log "MENU" "Vào menu Kiểm tra cập nhật"
+                check_for_updates 
+                ;;
+            8) 
+                log "MENU" "Vào menu Thông tin tác giả"
+                show_authors 
+                ;;
+            0) 
+                log "SYSTEM" "Kết thúc chương trình"
+                echo "Đã thoát Anisub..."
+                exit 0 
+                ;;
+            *) 
+                warn "Lựa chọn không hợp lệ, vui lòng chọn lại"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
+                ;;
         esac
     done
 }
@@ -930,7 +1055,10 @@ favorites_menu() {
                         continue
                     fi
                     
-                    local selected_anime=$(echo "$anime_list" | grep -F "$selected_anime" | head -n 1)
+                    local selected_anime=$(echo "$anime_list" | fzf --prompt="Chọn anime: " \
+			--preview "echo 'Đang tải thô1ng tin...'; \
+			url=\$(echo {} | sed 's/.*(//;s/)//'); \
+			curl -s \"\$url\" | pup 'h1, p.description text{}' | tr '\n' ' '") # Đang bị lỗi chưa biết cách sửa
                     
                     if [[ -z "$selected_anime" ]]; then
                         warn "Không tìm thấy anime '$selected_anime' trên OPhim"
@@ -1044,15 +1172,24 @@ cut_video_menu() {
 # ============================ HÀM ĐỌC MANGA (CHƯA NÂNG CẤP - SẼ NÂNG CẤP SAU KHI CÓ API THÍCH HỢP)============================
 # ???
 read_manga() {
-    if ! command -v manga-tui &> /dev/null; then
-        error "manga-tui không được cài đặt. Vui lòng cài đặt nó trước khi sử dụng tính năng này."
-        read -n 1 -s -r -p "Nhấn bất kỳ phím nào để tiếp tục..."
-        return
-    fi
+    clear
+    echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
+    echo -e "${CYAN}│          ${MAGENTA}TÍNH NĂNG ĐANG PHÁT TRIỂN${CYAN}           │${NC}"
+    echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
+    echo -e "${CYAN}│  ${YELLOW}Chức năng đọc manga đang được phát triển${CYAN}    │${NC}"
+    echo -e "${CYAN}│  ${YELLOW}Vui lòng chờ bản cập nhật sau!${CYAN}              │${NC}"
+    echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
+    echo -e "${CYAN}│  ${YELLOW}Liên hệ: ${GREEN}@Kidtomboy${CYAN}                          │${NC}"
+    echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
     
-    notify "Đang khởi động manga-tui..."
-    manga-tui lang --set 'vi'
-    manga-tui
+    # Ghi log
+    log "Người dùng truy cập tính năng đang phát triển (Đọc manga)"
+    
+    # Đợi người dùng nhấn phím
+    read -n 1 -s -r -p "Nhấn bất kỳ phím nào để quay lại menu chính..."
+    
+    # Quay về menu chính
+    return
 }
 
 # ============================ HIỂN THỊ MENU CỦA CÀI ĐẶT ============================
@@ -1169,10 +1306,52 @@ clear_cache() {
     notify "Đã xóa toàn bộ cache"
 }
 
+# ============================ XỬ LÝ CLI ARGUMENTS ============================
+process_cli_arguments() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -u|--update)
+                update_script
+                exit 0
+                ;;
+            -v|--version)
+                echo "Anisub version $VERSION"
+                exit 0
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            *)
+                warn "Argument không hợp lệ: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+        shift
+    done
+}
+
+# ============================ HIỂN THỊ TRỢ GIÚP ============================
+show_help() {
+    echo -e "${CYAN}Usage: ${NC}$0 [OPTION]"
+    echo -e "${CYAN}Options:${NC}"
+    echo -e "  -u, --update    Cập nhật script lên phiên bản mới nhất"
+    echo -e "  -v, --version   Hiển thị phiên bản hiện tại"
+    echo -e "  -h, --help      Hiển thị thông tin trợ giúp này"
+    echo -e "\n${YELLOW}Anisub - Công cụ xem anime từ terminal"
+    echo -e "Tác giả: ${AUTHORS[*]}${NC}"
+}
+
 # ============================ HÀM KHI KHỞI ĐỘNG ANISUB ============================
 main() {
     init_dirs
     check_dependencies
+    
+    # Xử lý CLI arguments nếu có
+    if [[ $# -gt 0 ]]; then
+        process_cli_arguments "$@"
+    fi
     
     # Hiển thị thông báo khởi động
     clear
@@ -1182,9 +1361,9 @@ main() {
     echo -e "${CYAN}│  ${YELLOW}Đang khởi động...${CYAN}                            │${NC}"
     echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
     
-    log "Bắt đầu Anisub - Chỉnh sửa lại bởi @Kidtomboy v$VERSION"
+    log "SYSTEM" "Bắt đầu chương trình Anisub v$VERSION"
     
-    # Kiểm tra kết nối Internet (Yêu cầu)
+    # Kiểm tra kết nối Internet
     if ! curl -Is https://google.com | grep -q "HTTP/2"; then
         error "Không có kết nối Internet. Vui lòng kiểm tra kết nối của bạn."
         exit 1
@@ -1193,6 +1372,91 @@ main() {
     # Chạy menu chính
     main_menu
 }
+trap 'log "SYSTEM" "Chương trình bị dừng đột ngột"; exit 1' SIGINT SIGTERM
+
+# ============================ KIỂM TRA BẢN CẬP NHẬT ============================
+check_for_updates() {
+    notify "Đang kiểm tra bản cập nhật..."
+    
+    # Thêm kiểm tra kết nối Internet trước
+    if ! curl -Is https://github.com >/dev/null 2>&1; then
+        error "Không thể kết nối đến GitHub. Vui lòng kiểm tra kết nối Internet."
+        return 1
+    fi
+
+    # Sử dụng URL raw chính xác 
+    local latest_content=$(curl -s "https://raw.githubusercontent.com/kidtomboy/Remake-Anisub/main/anisub.sh")
+    if [[ -z "$latest_content" ]]; then
+        error "Không thể tải nội dung từ GitHub"
+        return 1
+    fi
+
+    local latest_version=$(echo "$latest_content" | grep -m1 "VERSION=" | cut -d'"' -f2)
+    
+    if [[ -z "$latest_version" ]]; then
+        error "Không thể xác định phiên bản mới nhất"
+        return 1
+    fi
+
+    if [[ "$latest_version" != "$VERSION" ]]; then
+        warn "Đã có bản cập nhật mới!"
+        echo -e "${YELLOW}Bản hiện tại: $VERSION"
+        echo -e "Bản mới nhất: $latest_version${NC}"
+        echo -e "${CYAN}Thay đổi:"
+        echo "$latest_content" | grep -A5 "# PHIỂN BẢN CỦA ANISUB" | tail -n +3
+        echo -e "${NC}"
+        
+        read -p "Bạn có muốn cập nhật không? (Y/N): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            update_script
+        else
+            notify "Bạn đã chọn không cập nhật. Có thể có lỗi tiềm ẩn khi sử dụng bản cũ."
+        fi
+    else
+        notify "Bạn đang sử dụng phiên bản mới nhất ($VERSION)"
+    fi
+}
+
+# ============================ CẬP NHẬT SCRIPT ============================
+update_script() {
+    notify "Đang cập nhật script..."
+    local tmp_file="/tmp/anisub_update.sh"
+    
+    if curl -s "https://raw.githubusercontent.com/kidtomboy/Remake-Anisub/main/anisub.sh" -o "$tmp_file"; then
+        # Kiểm tra xem file tải về có hợp lệ không
+        if grep -q "ANISUB PRO MAX" "$tmp_file"; then
+            chmod +x "$tmp_file"
+            mv "$tmp_file" "$0"
+            notify "Cập nhật thành công! Vui lòng chạy lại script."
+            exit 0
+        else
+            rm -f "$tmp_file"
+            error "File tải về không hợp lệ"
+            return 1
+        fi
+    else
+        error "Không thể tải bản cập nhật. Vui lòng thử lại sau."
+        return 1
+    fi
+}
+
+# ============================ HIỂN THỊ THÔNG TIN TÁC GIẢ ============================
+show_authors() {
+    clear
+    echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
+    echo -e "${CYAN}│             ${MAGENTA}THÔNG TIN TÁC GIẢ${CYAN}               │${NC}"
+    echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
+    for author in "${AUTHORS[@]}"; do
+        echo -e "${CYAN}│  ${YELLOW}- $author${CYAN}" | awk '{printf "%-40s", $0}' | sed 's/$/│/'
+    done
+    echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
+    echo -e "${CYAN}│  ${YELLOW}Donate: $DONATION_LINK${CYAN}" | awk '{printf "%-40s", $0}' | sed 's/$/│/'
+    echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+    read -n 1 -s -r -p "Nhấn bất kỳ phím nào để tiếp tục..."
+}
 
 # ============================ CHẠY CHƯƠNG TRÌNH ============================
-main
+main"$@"
+
+# END~ | Remake by Cherry Cute :33
