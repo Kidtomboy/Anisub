@@ -277,7 +277,7 @@ search_anime_ophim() {
     fi
 
     # Tạo danh sách anime với thông tin đầy đủ
-    local processed_list=$(echo "$anime_list" | awk '{print "https://ophim17.cc" $0}' | \             #Hãy thay nếu như có nguồn khác!
+    local processed_list=$(echo "$anime_list" | awk '{print "https://ophim17.cc" $0}' | \
         while IFS= read -r link; do
             local title=$(timeout 20 curl -s "$link" | pup 'h1 text{}' | tr -d '\n' 2>/dev/null)
             if [[ -z "$title" ]]; then
