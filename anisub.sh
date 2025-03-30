@@ -1,136 +1,432 @@
 #!/bin/bash
 
 ###############################################################################
-# ANISUB PRO MAX xD
-# Phiên bản: Không biết vì lười nghĩ ra
-# Tác giả: Github: @NiyakiPham - Remake by @Kidtomboy 1337
-# Ngày cập nhật: Lười lắm ghi cho có thôi ^^
+# ANISUB PRO MAX - PHIÊN BẢN CAO CẤP
+# Phiên bản: 3.0.0
+# Tác giả: 
+#   - Original: @NiyakiPham 
+#   - Remake & Enhance: @Kidtomboy
+# Ngày cập nhật: 30-3-2025
 #
 # Tính năng chính:
-# - Phát anime từ nhiều nguồn (Cụ thể là Ophim, Anidata)
-# - Đọc manga trực tuyến (Chưa cập nhật)
-# - Tải xuống tập phim về thiết bị
-# - Cắt và ghép video ngay trên terminal
-# - Lịch sử xem video
-# - Thêm video vào danh sách yêu thích 
-# - Hệ thống cấu hình và cache (Có thể chỉnh sửa)
-# - Bật/tắt thông báo (Tùy chọn)
+# - Phát anime từ nhiều nguồn (Ophim17, AniData, YouTube, Bilibili)
+# - Đọc manga trực tuyến (beta)
+# - Tải xuống tập phim với nhiều tùy chọn
+# - Công cụ video mạnh mẽ (cắt/ghép/xem trước)
+# - Lịch sử xem chi tiết
+# - Danh sách yêu thích thông minh
+# - Hệ thống cache và cấu hình linh hoạt
+# - Hỗ trợ đa nền tảng (Linux, Windows, macOS, Android/Termux)
+# - Giao diện terminal đẹp với nhiều theme
 ###############################################################################
-# PHIỂN BẢN CỦA ANISUB VÀ THỜI GIAN CODE LẪN CHỈNH SỬA
 
-# Phiên bản script 
-VERSION="Unknown 1337"
+# ============================ CẤU HÌNH HỆ THỐNG ============================
+VERSION="3.0.0"
+AUTHORS=("Kidtomboy (Remake & Enhance)" "NiyakiPham (Original)")
+DONATION_LINK="https://github.com/kidtomboy"
 
-# Liệt kê thời gian code và chỉnh sửa lại: 
-# START: 23/3/2025 - 19:20
-# 1
-# 2
-# 3
-# 4
-# 5
-# 6 
-# 7
-# Ngày nào cũng code sao nhớ nổi T^T
-# END: 28/3/2025 - 4:20
+# ============================ BIỂU TƯỢNG UNICODE ============================
+SYM_SEARCH="🔍" 
+SYM_HIST="🕒"  
+SYM_FAV="⭐"   
+SYM_TOOLS="🛠️" 
+SYM_MANGA="📖" 
+SYM_SETTINGS="⚙️" 
+SYM_UPDATE="🔄" 
+SYM_INFO="ℹ️"  
+SYM_EXIT="🚪"  
+SYM_DOWNLOAD="💾" 
+SYM_PLAY="▶️"   
+SYM_CUT="✂️"   
+SYM_MERGE="➕" 
+SYM_DELETE="🗑️" 
+SYM_PROMPT="❯"
+SYM_NEXT="→" 
+SYM_PREV="←" 
+SYM_SELECT="✓" 
+SYM_FOLDER="📁"
+SYM_WARNING="⚠️"
+SYM_ERROR="❌"
+SYM_SUCCESS="✅"
 
-# ============================ CẤU HÌNH CỦA ANISUB ============================
-CONFIG_DIR="$HOME/.config/anisub_cli"           # Có thể thay đổi tùy ý
-CONFIG_FILE="$CONFIG_DIR/config.cfg"            # Có thể thay đổi tùy ý
-DOWNLOAD_DIR="$HOME/Downloads/anime"            # Có thể thay đổi tùy ý
-LOG_FILE="$CONFIG_DIR/anisub_cli.log"           # Có thể thay đổi tùy ý
-CACHE_DIR="$CONFIG_DIR/cache"                   # Có thể thay đổi tùy ý
-HISTORY_FILE="$CONFIG_DIR/history.txt"          # Có thể thay đổi tùy ý
-FAVORITES_FILE="$CONFIG_DIR/favorites.txt"      # Có thể thay đổi tùy ý
+# Unicode box-drawing characters
+BOX_HORIZ="═"
+BOX_VERT="║"
+BOX_CORNER_TL="╔"
+BOX_CORNER_TR="╗"
+BOX_CORNER_BL="╚"
+BOX_CORNER_BR="╝"
+BOX_T="╦"
+BOX_B="╩"
+BOX_L="╠"
+BOX_R="╣"
+BOX_CROSS="╬"
 
-# ============================ CẤU HÌNH MÀU SẮC ============================
-RED='\033[0;31m'            # Có thể thay đổi tùy ý
-GREEN='\033[0;32m'          # Có thể thay đổi tùy ý
-YELLOW='\033[1;33m'         # Có thể thay đổi tùy ý
-BLUE='\033[0;34m'           # Có thể thay đổi tùy ý
-MAGENTA='\033[0;35m'        # Có thể thay đổi tùy ý
-CYAN='\033[0;36m'           # Có thể thay đổi tùy ý
-NC='\033[0m' # Không màu    # Có thể thay đổi tùy ý
+# Phát hiện hệ điều hành
+detect_os() {
+    case "$(uname -s)" in
+        Linux*)     
+            OS="Linux"
+            if [[ -f /etc/os-release ]]; then
+                source /etc/os-release
+                OS_DISTRO="$ID"
+            elif [[ -f /etc/debian_version ]]; then
+                OS_DISTRO="debian"
+            elif [[ -f /etc/arch-release ]]; then
+                OS_DISTRO="arch"
+            elif [[ -f /etc/gentoo-release ]]; then
+                OS_DISTRO="gentoo"
+            else
+                OS_DISTRO="unknown"
+            fi
+            ;;
+        Darwin*)    
+            OS="macOS"
+            OS_DISTRO="macos"
+            ;;
+        CYGWIN*|MINGW*|MSYS*) 
+            OS="Windows"
+            OS_DISTRO="windows"
+            ;;
+        *)          
+            OS="Unknown"
+            OS_DISTRO="unknown"
+    esac
 
-# Source bên dưới không được chỉnh sửa nếu không nắm rõ về code!!! @Kidtomboy
-
-# ============================ COOLDOWN THÔNG BÁO ============================
-LAST_NOTIFICATION_TIME=2 		    	# Tăng thời gian Cooldown nếu cần
-NOTIFICATION_COOLDOWN=2 # 2 giây            # Tăng thời gian Cooldown nếu cần
-
-# ============================ KHỞI TẠO THƯ MỤC VÀ FILE CẦN THIẾT ============================
-init_dirs() {
-    mkdir -p "$CONFIG_DIR" "$DOWNLOAD_DIR" "$CACHE_DIR"
-    touch "$LOG_FILE" "$HISTORY_FILE" "$FAVORITES_FILE"
-    
-    # Tạo file config nếu chưa có
-    if [[ ! -f "$CONFIG_FILE" ]]; then
-        cat > "$CONFIG_FILE" <<- EOM
-
-# ============================ CẤU HÌNH MẶC ĐỊNH CỦA ANISUB ============================
-DEFAULT_PLAYER="mpv"
-DEFAULT_QUALITY="720p"
-DEFAULT_SOURCE="ophim"
-MAX_CACHE_AGE=86400 # 1 ngày ( Tình bằng thời gian: giây)
-THEME="dark"
-NOTIFICATIONS=true
-UPDATE_URL="https://raw.githubusercontent.com/kidtomboy/Remake-Anisub/main/anisub.sh"
-EOM
+    # Kiểm tra Termux trên Android
+    if [[ "$OS" == "Linux" ]] && [[ -d "/data/data/com.termux/files" ]]; then
+        OS="Android/Termux"
+        OS_DISTRO="termux"
     fi
-    
-    source "$CONFIG_FILE"
-    log "SYSTEM" "Khởi tạo thư mục và file cấu hình"
 }
 
-# ============================ CẤU HÌNH CỦA NHÀ PHÁT TRIỂN ============================
-AUTHORS=("Kidtomboy (Remake)" "NiyakiPham (Original)")
-DONATION_LINK="Ahuhu Cherry chưa muốn nhận Donate :33" 
+detect_os
 
-# ============================ KIỂM TRA THÔNG BÁO ============================
-can_notify() {
-    local current_time=$(date +%s)
-    if (( current_time - LAST_NOTIFICATION_TIME >= NOTIFICATION_COOLDOWN )); then
-        LAST_NOTIFICATION_TIME=$current_time
-        return 0
+# ============================ CẤU HÌNH THƯ MỤC ============================
+init_dirs() {
+    log "SYSTEM" "Đang khởi tạo thư mục..."
+    case "$OS" in
+        "Linux"|"macOS")
+            CONFIG_DIR="$HOME/.config/anisub_pro"
+            DOWNLOAD_DIR="$HOME/Downloads/anisub_downloads"
+            ;;
+        "Windows")
+            CONFIG_DIR="$APPDATA/anisub_pro"
+            DOWNLOAD_DIR="$USERPROFILE/Downloads/anisub_downloads"
+            ;;
+        "Android/Termux")
+            CONFIG_DIR="$HOME/.config/anisub_pro"
+            DOWNLOAD_DIR="/sdcard/Download/anisub_downloads"
+            ;;
+        *)
+            CONFIG_DIR="$HOME/.anisub_pro"
+            DOWNLOAD_DIR="$HOME/anisub_downloads"
+            ;;
+    esac
+
+    # Tạo các thư mục cần thiết
+    mkdir -p "$CONFIG_DIR" "$DOWNLOAD_DIR" "$CONFIG_DIR/cache" "$CONFIG_DIR/logs" \
+             "$CONFIG_DIR/backups" "$CONFIG_DIR/manga"
+
+    # File cấu hình
+    CONFIG_FILE="$CONFIG_DIR/config.cfg"
+    LOG_FILE="$CONFIG_DIR/logs/anisub_$(date +%Y%m%d).log"
+    HISTORY_FILE="$CONFIG_DIR/history.json"
+    FAVORITES_FILE="$CONFIG_DIR/favorites.json"
+    CACHE_DIR="$CONFIG_DIR/cache"
+    BACKUP_DIR="$CONFIG_DIR/backups"
+    MANGA_DIR="$CONFIG_DIR/manga"
+
+    # Tạo file cấu hình mặc định nếu chưa có
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        log "CONFIG" "Tạo file cấu hình mới"
+    cat > "$CONFIG_FILE" <<- EOM
+
+    # CẤU HÌNH MẶC ĐỊNH ANISUB PRO
+DEFAULT_PLAYER="mpv"
+DEFAULT_QUALITY="720p"
+DEFAULT_SOURCE="ophim17"
+THEME="dark"
+NOTIFICATIONS="true"
+MAX_CACHE_AGE=86400
+UPDATE_URL="https://raw.githubusercontent.com/kidtomboy/Remake-Anisub/main/anisub.sh"
+AUTO_BACKUP=true
+AUTO_CLEANUP=true
+PLAYER_ARGS="--no-terminal --force-window --quiet"
+SKIP_DEPENDENCY_CHECK=false
+LOG_LEVEL="info" 
+LOG_TO_FILE=true  
+SKIP_OPTIONAL_PKGS=false 
+EOM
     fi
-    return 1
+
+    # Load cấu hình
+    source "$CONFIG_FILE"
+    log "CONFIG" "Đã tải cấu hình từ $CONFIG_FILE"
+    
+    # Sao lưu tự động nếu được bật
+    if [[ "$AUTO_BACKUP" == "true" ]]; then
+        local backup_file="$BACKUP_DIR/config_backup_$(date +%Y%m%d_%H%M%S).cfg"
+        cp "$CONFIG_FILE" "$backup_file"
+        log "BACKUP" "Đã sao lưu cấu hình tại $backup_file"
+        # Giữ tối đa 5 bản sao lưu
+        ls -t "$BACKUP_DIR"/config_backup_*.cfg | tail -n +6 | xargs rm -f --
+    fi
+    
+    # Dọn dẹp cache tự động nếu được bật
+    if [[ "$AUTO_CLEANUP" == "true" ]]; then
+        log "CLEANUP" "Đang dọn dẹp cache cũ..."
+        find "$CACHE_DIR" -type f -mtime +7 -exec rm -f {} \;
+    fi
+}
+
+# ============================ CẤU HÌNH MÀU SẮC & GIAO DIỆN ============================
+init_ui() {
+    log "UI" "Đang khởi tạo giao diện..."
+    # Màu sắc theo theme
+    case "$THEME" in
+        "dark")
+            PRIMARY='\033[0;35m'
+            SECONDARY='\033[0;36m'
+            ACCENT='\033[1;33m'
+            WARNING='\033[0;31m'
+            INFO='\033[0;32m'
+            TEXT='\033[0;37m'
+            BG='\033[40m'
+            ;;
+        "light")
+            PRIMARY='\033[0;34m'
+            SECONDARY='\033[0;36m'
+            ACCENT='\033[1;35m'
+            WARNING='\033[0;31m'
+            INFO='\033[0;32m'
+            TEXT='\033[0;30m'
+            BG='\033[47m'
+            ;;
+        "blue")
+            PRIMARY='\033[0;34m'
+            SECONDARY='\033[0;36m'
+            ACCENT='\033[1;33m'
+            WARNING='\033[0;31m'
+            INFO='\033[0;32m'
+            TEXT='\033[0;37m'
+            BG='\033[44m'
+            ;;
+        "green")
+            PRIMARY='\033[0;32m'
+            SECONDARY='\033[1;32m'
+            ACCENT='\033[1;33m'
+            WARNING='\033[0;31m'
+            INFO='\033[0;34m'
+            TEXT='\033[0;37m'
+            BG='\033[42m'
+            ;;
+        "red")
+            PRIMARY='\033[0;31m'
+            SECONDARY='\033[1;31m'
+            ACCENT='\033[1;33m'
+            WARNING='\033[0;34m'
+            INFO='\033[0;32m'
+            TEXT='\033[0;37m'
+            BG='\033[41m'
+            ;;
+        *)
+            PRIMARY='\033[0;35m'
+            SECONDARY='\033[0;36m'
+            ACCENT='\033[1;33m'
+            WARNING='\033[0;31m'
+            INFO='\033[0;32m'
+            TEXT='\033[0;37m'
+            BG='\033[40m'
+            ;;
+    esac
+    
+    NC='\033[0m' # No Color
+}
+
+# ============================ HÀM HIỂN THỊ GIAO DIỆN ============================
+draw_box() {
+    local width=$1
+    local title=$2
+    local color=$3
+    local content=$4
+    
+    echo -ne "${color}${BOX_CORNER_TL}"
+    for ((i=0; i<width-2; i++)); do echo -ne "${BOX_HORIZ}"; done
+    echo -ne "${BOX_CORNER_TR}${NC}\n"
+    
+    if [[ -n "$title" ]]; then
+        local title_len=${#title}
+        local left_pad=$(( (width - title_len - 2) / 2 ))
+        local right_pad=$(( width - title_len - 2 - left_pad ))
+        
+        echo -ne "${color}${BOX_VERT}${NC}"
+        for ((i=0; i<left_pad; i++)); do echo -ne " "; done
+        echo -ne "${ACCENT}${title}${NC}"
+        for ((i=0; i<right_pad; i++)); do echo -ne " "; done
+        echo -ne "${color}${BOX_VERT}${NC}\n"
+        
+        echo -ne "${color}${BOX_L}"
+        for ((i=0; i<width-2; i++)); do echo -ne "${BOX_HORIZ}"; done
+        echo -ne "${BOX_R}${NC}\n"
+    fi
+    
+    while IFS= read -r line; do
+        echo -ne "${color}${BOX_VERT}${NC} ${TEXT}${line}"
+        for ((i=${#line}; i<width-3; i++)); do echo -ne " "; done
+        echo -ne "${color}${BOX_VERT}${NC}\n"
+    done <<< "$content"
+    
+    echo -ne "${color}${BOX_CORNER_BL}"
+    for ((i=0; i<width-2; i++)); do echo -ne "${BOX_HORIZ}"; done
+    echo -ne "${BOX_CORNER_BR}${NC}\n"
+}
+
+show_header() {
+    clear
+    local width=60
+    local title=" ANISUB PRO MAX v$VERSION "
+    
+    echo -ne "${PRIMARY}${BOX_CORNER_TL}"
+    for ((i=0; i<width-2; i++)); do echo -ne "${BOX_HORIZ}"; done
+    echo -ne "${BOX_CORNER_TR}${NC}\n"
+    
+    echo -ne "${PRIMARY}${BOX_VERT}${NC}"
+    for ((i=0; i<(width-${#title}-2)/2; i++)); do echo -ne " "; done
+    echo -ne "${ACCENT}${title}${NC}"
+    for ((i=0; i<(width-${#title}-2)/2; i++)); do echo -ne " "; done
+    echo -ne "${PRIMARY}${BOX_VERT}${NC}\n"
+    
+    echo -ne "${PRIMARY}${BOX_L}"
+    for ((i=0; i<width-2; i++)); do echo -ne "${BOX_HORIZ}"; done
+    echo -ne "${BOX_R}${NC}\n"
+}
+
+show_menu() {
+    local options=("$@")
+    local width=60
+    local content=""
+    
+    for i in "${!options[@]}"; do
+        if [[ $((i%2)) -eq 0 ]]; then
+            # Menu item
+            content+="${PRIMARY}${options[i]}${NC}\n"
+        else
+            # Description
+            content+="  ${TEXT}${options[i]}${NC}\n"
+        fi
+    done
+    
+    draw_box $width "" "$PRIMARY" "$content"
 }
 
 # ============================ GHI LOG (NHẬT KÝ) ============================
 log() {
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-    local log_type="$1"
+    local log_type="${1^^}"  # Chuyển thành chữ hoa
     local message="$2"
-    echo "[$timestamp] [$log_type] $message" >> "$LOG_FILE"
-}
-# ============================ HIỂN THỊ CÁC THÔNG BÁO ============================
-notify() {
-    if [[ "$NOTIFICATIONS" == "true" ]]; then
-        if can_notify; then
-            if command -v notify-send &> /dev/null; then
-                notify-send "Anisub" "$1"
-            fi
+    local user_input="$3"
+    
+    # Xác định mức độ log
+    local log_level_num=0
+    case "$LOG_LEVEL" in
+        "debug") log_level_num=0 ;;
+        "info") log_level_num=1 ;;
+        "warn") log_level_num=2 ;;
+        "error") log_level_num=3 ;;
+        *) log_level_num=1 ;;
+    esac
+    
+    # Xác định mức độ log hiện tại
+    local current_level_num=0
+    case "$log_type" in
+        "DEBUG") current_level_num=0 ;;
+        "INFO") current_level_num=1 ;;
+        "WARN") current_level_num=2 ;;
+        "ERROR") current_level_num=3 ;;
+        *) current_level_num=1 ;;
+    esac
+    
+    # Chỉ ghi log nếu mức độ hiện tại >= mức độ cấu hình
+    if [[ $current_level_num -lt $log_level_num ]]; then
+        return
+    fi
+    
+    # Tạo thông điệp log
+    local log_entry="[$timestamp] [$log_type] $message"
+    [[ -n "$user_input" ]] && log_entry+=" | Input: $user_input"
+    
+    # Hiển thị log ra console nếu ở chế độ debug
+    if [[ "$DEBUG_MODE" == "true" || "$log_type" == "ERROR" || "$log_type" == "WARN" ]]; then
+        case "$log_type" in
+            "ERROR") echo -e "${WARNING}$log_entry${NC}" >&2 ;;
+            "WARN") echo -e "${ACCENT}$log_entry${NC}" >&2 ;;
+            *) echo -e "${SECONDARY}$log_entry${NC}" >&2 ;;
+        esac
+    fi
+    
+    # Ghi vào file log nếu được bật
+    if [[ "$LOG_TO_FILE" == "true" ]]; then
+        echo "$log_entry" >> "$CONFIG_DIR/anisub.log"
+    fi
+    
+    # Giới hạn kích thước file log (tối đa 1MB)
+    if [[ -f "$CONFIG_DIR/anisub.log" ]]; then
+        local log_size=$(stat -c %s "$CONFIG_DIR/anisub.log" 2>/dev/null || stat -f %z "$CONFIG_DIR/anisub.log")
+        if [[ $log_size -gt 1048576 ]]; then  # 1MB
+            tail -n 500 "$CONFIG_DIR/anisub.log" > "$CONFIG_DIR/anisub.log.tmp"
+            mv "$CONFIG_DIR/anisub.log.tmp" "$CONFIG_DIR/anisub.log"
         fi
     fi
-    echo -e "${GREEN}[INFO]${NC} $1"
-    log "INFO" "$1"
+}
+
+# ============================ HIỂN THỊ CÁC THÔNG BÁO ============================
+notify() {
+    local message="$1"
+    local icon="${2:-$SYM_INFO}"
+    
+    if [[ "$NOTIFICATIONS" == "true" ]]; then
+        case "$OS" in
+            "Linux")
+                notify-send -i "video-display" "Anisub" "$icon $message"
+                ;;
+            "macOS")
+                osascript -e "display notification \"$message\" with title \"Anisub\" subtitle \"$icon\""
+                ;;
+            "Windows")
+                # TODO: Implement Windows notification
+                ;;
+            "Android/Termux")
+                termux-notification -t "Anisub" -c "$icon $message"
+                ;;
+        esac
+    fi
+    echo -e "${INFO}[${icon}]${NC} $message"
+    log "INFO" "$message"
 }
 
 warn() {
-    if can_notify; then
-        echo -e "${YELLOW}[WARN]${NC} $1" >&2
-    fi
-    log "WARN" "$1"
+    local message="$1"
+    echo -e "${WARNING}[${SYM_WARNING}]${NC} $message" >&2
+    log "WARN" "$message"
 }
 
 error() {
-    if can_notify; then
-        echo -e "${RED}[ERROR]${NC} $1" >&2
-    fi
-    log "ERROR" "$1"
+    local message="$1"
+    echo -e "${WARNING}[${SYM_ERROR}]${NC} $message" >&2
+    log "ERROR" "$message"
 }
 
 # ============================ KIỂM TRA VÀ TỰ ĐỘNG CÀI ĐẶT CÁC GÓI ============================
 check_dependencies() {
+    log "SYSTEM" "Kiểm tra phụ thuộc..."
+    
+    # Bỏ qua nếu có flag --version hoặc SKIP_DEPENDENCY_CHECK=true
+    if [[ "$1" == "--version" || "$SKIP_DEPENDENCY_CHECK" == "true" ]]; then
+        log "SYSTEM" "Bỏ qua kiểm tra phụ thuộc"
+        return 0
+    fi
+
     local -A pkg_manager=(
         ["apt"]="sudo apt-get install -y"
         ["pacman"]="sudo pacman -S --noconfirm"
@@ -138,19 +434,25 @@ check_dependencies() {
         ["yum"]="sudo yum install -y"
         ["zypper"]="sudo zypper install -y"
         ["brew"]="brew install"
+        ["termux"]="pkg install -y"
     )
 
     # Xác định trình quản lý gói
     local manager
-    for m in "${!pkg_manager[@]}"; do
-        if command -v "$m" &>/dev/null; then
-            manager="$m"
-            break
-        fi
-    done
+    if [[ "$OS_DISTRO" == "termux" ]]; then
+        manager="termux"
+    else
+        for m in "${!pkg_manager[@]}"; do
+            if command -v "$m" &>/dev/null; then
+                manager="$m"
+                break
+            fi
+        done
+    fi
 
     if [[ -z "$manager" ]]; then
         error "Không thể xác định trình quản lý gói!"
+        log "ERROR" "Không thể xác định trình quản lý gói"
         return 1
     fi
 
@@ -168,8 +470,20 @@ check_dependencies() {
         ["yt-dlp"]="yt-dlp"
         ["ffmpeg"]="ffmpeg"
         ["notify-send"]="libnotify-bin"  # Trên Debian/Ubuntu
-        # ["manga-tui"]="manga-tui" # Bỏ vì quá phiền phức | Sẽ để dành khi nào có API
+        ["manga-tui"]="manga-tui"
+        ["termux-api"]="termux-api" # Cho Termux
+        ["bilibili-dl"]="bilibili-dl"
     )
+
+    # Điều chỉnh package names theo distro
+    case "$OS_DISTRO" in
+        "arch"|"manjaro")
+            optional_pkgs["notify-send"]="libnotify"
+            ;;
+        "termux")
+            required_pkgs["mpv"]="mpv-x"
+            ;;
+    esac
 
     local missing=()
     local optional_missing=()
@@ -178,53 +492,65 @@ check_dependencies() {
     for cmd in "${!required_pkgs[@]}"; do
         if ! command -v "$cmd" &>/dev/null; then
             missing+=("${required_pkgs[$cmd]}")
+            log "DEPENDENCY" "Thiếu gói bắt buộc: $cmd"
         fi
     done
 
-    # Kiểm tra gói tùy chọn
-    for cmd in "${!optional_pkgs[@]}"; do
-        if ! command -v "$cmd" &>/dev/null; then
-            optional_missing+=("${optional_pkgs[$cmd]}")
-        fi
-    done
+    # Kiểm tra gói tùy chọn (chỉ nếu SKIP_OPTIONAL_PKGS=false)
+    if [[ "$SKIP_OPTIONAL_PKGS" != "true" ]]; then
+        for cmd in "${!optional_pkgs[@]}"; do
+            if ! command -v "$cmd" &>/dev/null; then
+                optional_missing+=("${optional_pkgs[$cmd]}")
+                log "DEPENDENCY" "Thiếu gói tùy chọn: $cmd"
+            fi
+        done
+    else
+        log "SYSTEM" "Bỏ qua kiểm tra gói tùy chọn do SKIP_OPTIONAL_PKGS=true"
+    fi
 
     # Cài đặt các gói bắt buộc
     if [[ ${#missing[@]} -gt 0 ]]; then
-        warn "Đang cài đặt các gói bắt buộc: ${missing[*]}"
+        warn "${SYM_WARNING} Đang cài đặt các gói bắt buộc: ${missing[*]}"
+        log "SYSTEM" "Cài đặt gói bắt buộc: ${missing[*]}"
         
-        # Xử lý đặc biệt cho notify-send trên Arch
-        if [[ "$manager" == "pacman" ]] && [[ " ${missing[@]} " =~ " libnotify-bin " ]]; then
-            missing=("${missing[@]/libnotify-bin/libnotify}")
-        fi
-
         if ! ${pkg_manager[$manager]} "${missing[@]}"; then
-            error "Không thể cài đặt các gói bắt buộc!"
+            error "${SYM_ERROR} Không thể cài đặt các gói bắt buộc!"
+            log "ERROR" "Không thể cài đặt gói bắt buộc: ${missing[*]}"
             exit 1
         fi
         log "SYSTEM" "Đã cài đặt gói bắt buộc: ${missing[*]}"
     fi
 
-    # Cài đặt các gói tùy chọn
-    if [[ ${#optional_missing[@]} -gt 0 ]]; then
-        warn "Các gói tùy chọn chưa có: ${optional_missing[*]}"
-        read -p "Bạn có muốn cài đặt chúng không? (y/N) (Mặc định là N)" -n 1 -r
+    # Cài đặt các gói tùy chọn (chỉ nếu SKIP_OPTIONAL_PKGS=false)
+    if [[ "$SKIP_OPTIONAL_PKGS" != "true" && ${#optional_missing[@]} -gt 0 ]]; then
+        warn "${SYM_WARNING} Các gói tùy chọn chưa có: ${optional_missing[*]}"
+        log "SYSTEM" "Gói tùy chọn chưa có: ${optional_missing[*]}"
+        
+        read -p "Bạn có muốn cài đặt chúng không? (y/N) " -n 1 -r
         echo
-       if [[ $REPLY =~ ^[Yy]$ ]]; then
-            # Xử lý đặc biệt cho manga-tui (cần cài qua cargo) # Bỏ vì quá phiền phức | Hứ~
-            #if [[ " ${optional_missing[@]} " =~ " manga-tui " ]]; then
-            #   if command -v cargo &>/dev/null; then
-            #        notify "Đang cài đặt manga-tui qua cargo..."
-            #       cargo install manga-tui
-            #       optional_missing=("${optional_missing[@]/manga-tui}")
-            #    else
-            #       warn "Không tìm thấy cargo, bỏ qua manga-tui"
-            #        optional_missing=("${optional_missing[@]/manga-tui}")
-            #   fi
-            #fi
+        log "USER" "Lựa chọn cài đặt gói tùy chọn" "$REPLY"
+        
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            # Xử lý đặc biệt cho manga-tui (cần cài qua cargo)
+            if [[ " ${optional_missing[@]} " =~ " manga-tui " ]]; then
+                if command -v cargo &>/dev/null; then
+                    notify "${SYM_INFO} Đang cài đặt manga-tui qua cargo..."
+                    log "SYSTEM" "Cài đặt manga-tui qua cargo"
+                    cargo install manga-tui
+                    optional_missing=("${optional_missing[@]/manga-tui}")
+                else
+                    warn "${SYM_WARNING} Không tìm thấy cargo, bỏ qua manga-tui"
+                    log "WARN" "Không tìm thấy cargo, bỏ qua manga-tui"
+                    optional_missing=("${optional_missing[@]/manga-tui}")
+                fi
+            fi
 
             # Cài các gói còn lại
             if [[ ${#optional_missing[@]} -gt 0 ]]; then
-                ${pkg_manager[$manager]} "${optional_missing[@]}" || warn "Có lỗi khi cài gói tùy chọn"
+                ${pkg_manager[$manager]} "${optional_missing[@]}" || {
+                    warn "${SYM_WARNING} Có lỗi khi cài gói tùy chọn"
+                    log "ERROR" "Có lỗi khi cài gói tùy chọn: ${optional_missing[*]}"
+                }
                 log "SYSTEM" "Đã cài đặt gói tùy chọn: ${optional_missing[*]}"
             fi
         fi
@@ -233,46 +559,54 @@ check_dependencies() {
     # Kiểm tra lại sau khi cài đặt
     for cmd in "${!required_pkgs[@]}"; do
         if ! command -v "$cmd" &>/dev/null; then
-            error "Không thể cài đặt $cmd, script không thể chạy!"
+            error "${SYM_ERROR} Không thể cài đặt $cmd, script không thể chạy!"
+            log "ERROR" "Không thể cài đặt $cmd, script không thể chạy"
             exit 1
         fi
     done
+    
+    log "SYSTEM" "Kiểm tra phụ thuộc hoàn tất"
 }
 
-# ============================ HÀM LẤY DANH SÁCH ANIME/PHIM TỪ OPHIM ============================
-search_anime_ophim() {
+# ============================ HÀM LẤY DANH SÁCH ANIME/PHIM TỪ OPHIM17 ============================
+search_anime_ophim17() {
     local keyword="$1"
+    log "SEARCH" "Tìm kiếm trên OPhim17 với từ khóa: $keyword"
     
     # Kiểm tra độ dài từ khóa
     if [[ ${#keyword} -lt 3 ]]; then
         error "Từ khóa tìm kiếm phải có ít nhất 3 ký tự"
+        log "ERROR" "Từ khóa quá ngắn: $keyword"
         return 1
     fi
 
-    local cache_file="$CACHE_DIR/ophim_search_${keyword}.cache"
+    local cache_file="$CACHE_DIR/ophim17_search_${keyword}.cache"
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
         local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file")))
         if [[ $cache_age -lt $MAX_CACHE_AGE ]]; then
+            log "CACHE" "Sử dụng kết quả từ cache cho: $keyword"
             cat "$cache_file"
             return
         fi
     fi
     
-    notify "Đang tìm kiếm: $keyword..."
+    notify "${SYM_SEARCH} Đang tìm kiếm: $keyword..."
     local search_url="https://ophim17.cc/tim-kiem?keyword=${keyword}"
     local anime_list
     
     # Sử dụng timeout cho curl để tránh treo lâu
     if ! anime_list=$(timeout 20 curl -s "$search_url" | pup '.ml-4 > a attr{href}' 2>/dev/null); then
         error "Không thể tải dữ liệu tìm kiếm"
+        log "ERROR" "Không thể tải dữ liệu tìm kiếm từ OPhim17"
         return 1
     fi
     
     # Xử lý kết quả tìm kiếm
     if [[ -z "$anime_list" ]]; then
         warn "Không tìm thấy anime nào với từ khóa '$keyword'"
+        log "SEARCH" "Không tìm thấy kết quả cho: $keyword"
         return 1
     fi
 
@@ -282,6 +616,7 @@ search_anime_ophim() {
             local title=$(timeout 20 curl -s "$link" | pup 'h1 text{}' | tr -d '\n' 2>/dev/null)
             if [[ -z "$title" ]]; then
                 title="Không có tiêu đề"
+                log "WARN" "Không lấy được tiêu đề cho URL: $link"
             fi
             printf '%s\n' "$link@@@$title"
         done | \
@@ -290,23 +625,28 @@ search_anime_ophim() {
     # Kiểm tra kết quả xử lý
     if [[ -z "$processed_list" ]]; then
         error "Không thể xử lý kết quả tìm kiếm"
+        log "ERROR" "Không thể xử lý kết quả tìm kiếm từ OPhim17"
         return 1
     fi
     
     # Lưu vào cache
     echo "$processed_list" > "$cache_file"
+    log "CACHE" "Lưu kết quả tìm kiếm vào cache: $cache_file"
     echo "$processed_list"
 }
 
-# ============================ HÀM LẤY DANH SÁCH TẬP TỪ OPHIM ============================
-get_episode_list_ophim() {
+# ============================ HÀM LẤY DANH SÁCH TẬP TỪ OPHIM17 ============================
+get_episode_list_ophim17() {
     local url="$1"
-    local cache_file="$CACHE_DIR/ophim_episodes_$(echo "$url" | md5sum | cut -d' ' -f1).cache"
+    log "STREAM" "Lấy danh sách tập từ URL: $url"
+    
+    local cache_file="$CACHE_DIR/ophim17_episodes_$(echo "$url" | md5sum | cut -d' ' -f1).cache"
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
         local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file")))
         if [[ $cache_age -lt $MAX_CACHE_AGE ]]; then
+            log "CACHE" "Sử dụng danh sách tập từ cache"
             cat "$cache_file"
             return
         fi
@@ -315,6 +655,7 @@ get_episode_list_ophim() {
     local html_content=$(curl -s "$url")
     if [[ -z "$html_content" ]]; then
         error "Không thể tải nội dung từ URL: $url"
+        log "ERROR" "Không thể tải nội dung từ URL: $url"
         return 1
     fi
     
@@ -325,6 +666,7 @@ get_episode_list_ophim() {
     
     if [[ -z "$episode_data" ]]; then
         error "Không tìm thấy danh sách tập phim cho URL: $url"
+        log "ERROR" "Không tìm thấy danh sách tập phim cho URL: $url"
         return 1
     fi
     
@@ -334,14 +676,17 @@ get_episode_list_ophim() {
         i=$((i + 1))
     done <<< "$episode_data" > "$cache_file"
     
+    log "CACHE" "Lưu danh sách tập vào cache: $cache_file"
     cat "$cache_file"
 }
 
-# ============================ LẤY TIÊU ĐÊ ============================
+# ============================ LẤY TIÊU ĐỀ TẬP PHIM ============================
 get_episode_title() {
     local episode_url="$1"
     local episode_number="$2"
-    local cache_file="$CACHE_DIR/ophim_title_$(echo "$episode_url" | md5sum | cut -d' ' -f1)_$episode_number.cache"
+    log "STREAM" "Lấy tiêu đề tập phim #$episode_number từ URL: $episode_url"
+    
+    local cache_file="$CACHE_DIR/ophim17_title_$(echo "$episode_url" | md5sum | cut -d' ' -f1)_$episode_number.cache"
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
@@ -353,21 +698,25 @@ get_episode_title() {
     
     if [[ -z "$episode_title" ]]; then
         episode_title="Episode $episode_number"
+        log "WARN" "Không lấy được tiêu đề tập phim, sử dụng mặc định"
     fi
     
     echo "$episode_title" > "$cache_file"
+    log "CACHE" "Lưu tiêu đề tập phim vào cache: $cache_file"
     echo "$episode_title"
 }
 
 # ============================ HÀM LẤY DANH SÁCH ANIME/PHIM TỪ ANIDATA (@NiyakiPham QUẢN LÝ) ============================
 get_anime_list_anidata() {
+    log "SEARCH" "Lấy danh sách anime từ AniData"
     local cache_file="$CACHE_DIR/anidata_list.cache"
-    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"             #Hãy thay nếu như có nguồn khác!
+    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
         local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file")))
         if [[ $cache_age -lt $MAX_CACHE_AGE ]]; then
+            log "CACHE" "Sử dụng danh sách anime từ cache"
             cat "$cache_file"
             return
         fi
@@ -378,19 +727,23 @@ get_anime_list_anidata() {
     
     # Lưu vào cache
     echo "$anime_names" > "$cache_file"
+    log "CACHE" "Lưu danh sách anime vào cache: $cache_file"
     echo "$anime_names"
 }
 
 # ============================ HÀM LẤY DANH SÁCH TẬP TỪ ANIDATA (@NiyakiPham QUẢN LÝ) ============================
 get_episode_list_anidata() {
     local anime_name="$1"
+    log "STREAM" "Lấy danh sách tập từ AniData cho: $anime_name"
+    
     local cache_file="$CACHE_DIR/anidata_episodes_$(echo "$anime_name" | md5sum | cut -d' ' -f1).cache"
-    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"            #Hãy thay nếu như có nguồn khác!
+    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
         local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file")))
         if [[ $cache_age -lt $MAX_CACHE_AGE ]]; then
+            log "CACHE" "Sử dụng danh sách tập từ cache"
             cat "$cache_file"
             return
         fi
@@ -401,6 +754,7 @@ get_episode_list_anidata() {
     
     # Lưu vào cache
     echo "$episodes" > "$cache_file"
+    log "CACHE" "Lưu danh sách tập vào cache: $cache_file"
     echo "$episodes"
 }
 
@@ -409,77 +763,200 @@ add_to_history() {
     local anime="$1"
     local episode="$2"
     local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+    log "HISTORY" "Thêm vào lịch sử: $anime - $episode"
     
-    # Giới hạn lịch sử 50 mục / tránh spam quá nhiều
-    local temp_file=$(mktemp)
-    echo "$timestamp|$anime|$episode" > "$temp_file"
-    cat "$HISTORY_FILE" | head -n 49 >> "$temp_file"
-    mv "$temp_file" "$HISTORY_FILE"
+    # Sử dụng JSON cho lịch sử
+    local history_entry="{\"timestamp\":\"$timestamp\",\"anime\":\"$anime\",\"episode\":\"$episode\"}"
+    
+    # Giới hạn lịch sử 50 mục
+    if [[ ! -f "$HISTORY_FILE" ]]; then
+        echo "[$history_entry]" > "$HISTORY_FILE"
+    else
+        local temp_file=$(mktemp)
+        jq --argjson entry "$history_entry" 'limit(50; [$entry] + .)' "$HISTORY_FILE" > "$temp_file"
+        mv "$temp_file" "$HISTORY_FILE"
+    fi
+}
+
+# ============================ Hàm cấu hình logging ============================
+configure_logging() {
+    while true; do
+        show_header
+        
+        local current_log_level="${LOG_LEVEL^^}"
+        local log_status=$([[ "$LOG_TO_FILE" == "true" ]] && echo "BẬT" || echo "TẮT")
+        
+        local options=(
+            "${SYM_SETTINGS} 1. Mức độ log hiện tại: $current_log_level" "Chọn mức độ ghi log (debug/info/warn/error)"
+            "${SYM_SETTINGS} 2. Ghi log ra file: $log_status" "Bật/tắt ghi log ra file anisub.log"
+            "${SYM_FOLDER} 3. Xem log file" "Hiển thị nội dung file log"
+            "${SYM_EXIT} 0. Quay lại" "Quay lại menu cài đặt"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn cấu hình log" "$choice"
+        
+        case $choice in
+            1)
+                local levels=("debug" "info" "warn" "error")
+                local selected=$(printf "%s\n" "${levels[@]}" | fzf --prompt="Chọn mức độ log: ")
+                
+                if [[ -n "$selected" ]]; then
+                    sed -i "s/^LOG_LEVEL=.*/LOG_LEVEL=\"$selected\"/" "$CONFIG_FILE"
+                    LOG_LEVEL="$selected"
+                    notify "${SYM_SUCCESS} Đã thay đổi mức độ log thành: $selected"
+                    log "SETTINGS" "Thay đổi mức độ log thành: $selected"
+                fi
+                ;;
+            2)
+                if [[ "$LOG_TO_FILE" == "true" ]]; then
+                    sed -i "s/^LOG_TO_FILE=.*/LOG_TO_FILE=false/" "$CONFIG_FILE"
+                    LOG_TO_FILE="false"
+                    notify "${SYM_SUCCESS} Đã tắt ghi log ra file"
+                    log "SETTINGS" "Tắt ghi log ra file"
+                else
+                    sed -i "s/^LOG_TO_FILE=.*/LOG_TO_FILE=true/" "$CONFIG_FILE"
+                    LOG_TO_FILE="true"
+                    notify "${SYM_SUCCESS} Đã bật ghi log ra file"
+                    log "SETTINGS" "Bật ghi log ra file"
+                fi
+                ;;
+            3)
+                if [[ -f "$CONFIG_DIR/anisub.log" ]]; then
+                    less "$CONFIG_DIR/anisub.log"
+                else
+                    warn "${SYM_WARNING} Không tìm thấy file log"
+                    log "WARN" "Không tìm thấy file log để xem"
+                fi
+                ;;
+            0)
+                return
+                ;;
+            *)
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
+                ;;
+        esac
+    done
+}
+
+# Hàm bật/tắt gói tùy chọn
+toggle_optional_packages() {
+    if [[ "$SKIP_OPTIONAL_PKGS" == "true" ]]; then
+        sed -i "s/^SKIP_OPTIONAL_PKGS=.*/SKIP_OPTIONAL_PKGS=false/" "$CONFIG_DIR"
+        SKIP_OPTIONAL_PKGS="false"
+        notify "${SYM_SUCCESS} Đã bật cài đặt gói tùy chọn"
+        log "SETTINGS" "Bật cài đặt gói tùy chọn"
+    else
+        sed -i "s/^SKIP_OPTIONAL_PKGS=.*/SKIP_OPTIONAL_PKGS=true/" "$CONFIG_DIR"
+        SKIP_OPTIONAL_PKGS="true"
+        notify "${SYM_SUCCESS} Đã tắt cài đặt gói tùy chọn"
+        log "SETTINGS" "Tắt cài đặt gói tùy chọn"
+    fi
 }
 
 # ============================ HÀM HIỂN THỊ LỊCH SỬ ĐÃ XEM ============================
 show_history() {
+    log "HISTORY" "Hiển thị lịch sử xem"
     if [[ ! -s "$HISTORY_FILE" ]]; then
         echo "Không có lịch sử xem."
         return
     fi
     
-    local history_list=$(cat "$HISTORY_FILE" | awk -F'|' '{print NR ". " $2 " - " $3 " (" $1 ")"}')
+    local history_list=$(jq -r '.[] | "\(.timestamp) | \(.anime) | \(.episode)"' "$HISTORY_FILE" | \
+        awk '{print NR ". " $0}')
     echo "$history_list"
 }
 
-# ============================ HÀM THÊM VÀO DANH SÁCH ============================
+# ============================ HÀM THÊM VÀO DANH SÁCH YÊU THÍCH ============================
 add_to_favorites() {
     local anime="$1"
+    log "FAVORITE" "Thêm vào yêu thích: $anime"
     
-    if grep -q "^$anime$" "$FAVORITES_FILE"; then
-        warn "Anime đã có trong danh sách yêu thích"
-        return
+    # Sử dụng JSON cho danh sách yêu thích
+    if [[ ! -f "$FAVORITES_FILE" ]]; then
+        echo "[\"$anime\"]" > "$FAVORITES_FILE"
+    else
+        if jq -e --arg anime "$anime" 'index($anime) != null' "$FAVORITES_FILE" >/dev/null; then
+            warn "Anime đã có trong danh sách yêu thích"
+            log "WARN" "Anime đã có trong yêu thích: $anime"
+            return
+        fi
+        
+        local temp_file=$(mktemp)
+        jq --arg anime "$anime" '. + [$anime]' "$FAVORITES_FILE" > "$temp_file"
+        mv "$temp_file" "$FAVORITES_FILE"
     fi
     
-    echo "$anime" >> "$FAVORITES_FILE"
-    notify "Đã thêm '$anime' vào danh sách yêu thích"
+    notify "${SYM_FAV} Đã thêm '$anime' vào danh sách yêu thích"
 }
 
 # ============================ HÀM XÓA KHỎI DANH SÁCH YÊU THÍCH ============================
 remove_from_favorites() {
     local anime="$1"
+    log "FAVORITE" "Xóa khỏi yêu thích: $anime"
     
-    if ! grep -q "^$anime$" "$FAVORITES_FILE"; then
+    if [[ ! -f "$FAVORITES_FILE" ]]; then
+        warn "Danh sách yêu thích trống"
+        log "WARN" "Danh sách yêu thích trống"
+        return
+    fi
+    
+    if ! jq -e --arg anime "$anime" 'index($anime) != null' "$FAVORITES_FILE" >/dev/null; then
         warn "Anime không có trong danh sách yêu thích"
+        log "WARN" "Anime không có trong yêu thích: $anime"
         return
     fi
     
     local temp_file=$(mktemp)
-    grep -v "^$anime$" "$FAVORITES_FILE" > "$temp_file"
+    jq --arg anime "$anime" 'del(.[index($anime)])' "$FAVORITES_FILE" > "$temp_file"
     mv "$temp_file" "$FAVORITES_FILE"
-    notify "Đã xóa '$anime' khỏi danh sách yêu thích"
+    
+    notify "${SYM_FAV} Đã xóa '$anime' khỏi danh sách yêu thích"
 }
 
 # ============================ HÀM XEM DANH SÁCH YÊU THÍCH ============================
 show_favorites() {
+    log "FAVORITE" "Hiển thị danh sách yêu thích"
     if [[ ! -s "$FAVORITES_FILE" ]]; then
         echo "Không có anime nào trong danh sách yêu thích."
         return
     fi
     
-    local favorites_list=$(cat "$FAVORITES_FILE" | awk '{print NR ". " $0}')
+    local favorites_list=$(jq -r '.[]' "$FAVORITES_FILE" | awk '{print NR ". " $0}')
     echo "$favorites_list"
 }
 
-# ============================ PHÁT VIDEO BẰNG MPV ============================
-play_with_mpv() {
+# ============================ PHÁT VIDEO BẰNG TRÌNH PHÁT ============================
+play_video() {
     local url="$1"
     local title="$2"
+    log "PLAYER" "Phát video: $title (URL: $url)"
     
-    notify "Đang phát: $title"
-    mpv "$url" \
-        --force-media-title="$title" \
-        --no-terminal \
-        --profile=sw-fast \
-        --audio-display=no \
-        --no-keepaspect-window \
-        --title="Anisub - $title"
+    notify "${SYM_PLAY} Đang phát: $title"
+    
+    case "$DEFAULT_PLAYER" in
+        "mpv")
+            mpv $PLAYER_ARGS --title="Anisub - $title" "$url"
+            ;;
+        "vlc")
+            vlc --qt-notification=0 "$url" &>/dev/null
+            ;;
+        "ffplay")
+            ffplay -nodisp -window_title "Anisub - $title" -autoexit "$url"
+            ;;
+        *)
+            mpv $PLAYER_ARGS --title="Anisub - $title" "$url"
+            ;;
+    esac
+    
+    if [[ $? -ne 0 ]]; then
+        error "${SYM_ERROR} Có lỗi khi phát video"
+        log "ERROR" "Lỗi khi phát video: $title (URL: $url)"
+        return 1
+    fi
 }
 
 # ============================ HÀM TẢI VIDEO VỀ THIẾT BỊ ============================
@@ -488,14 +965,16 @@ download_video() {
     local title="$2"
     local output_dir="$3"
     local anime_name="$4"
+    log "DOWNLOAD" "Bắt đầu tải video: $title (URL: $url)"
     
     if ! command -v yt-dlp &> /dev/null; then
-        error "yt-dlp không được cài đặt. Không thể tải video."
+        error "${SYM_ERROR} yt-dlp không được cài đặt. Không thể tải video."
+        log "ERROR" "yt-dlp không được cài đặt"
         return 1
     fi
     
     mkdir -p "$output_dir"
-    notify "Đang tải: $title"
+    notify "${SYM_DOWNLOAD} Đang tải: $title"
     
     yt-dlp -o "$output_dir/$title.%(ext)s" \
         --no-progress \
@@ -504,58 +983,72 @@ download_video() {
         "$url"
     
     if [[ $? -eq 0 ]]; then
-        notify "Đã tải xong: $title"
+        notify "${SYM_SUCCESS} Đã tải xong: $title"
         log "DOWNLOAD" "Tải thành công: $title"
         
         # Thêm menu sau khi tải xong
         while true; do
             clear
-            echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-            echo -e "${CYAN}│       ${MAGENTA}TẢI XONG: $title${CYAN}               │${NC}"
-            echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-            echo -e "${CYAN}│  ${YELLOW}1. Phát video vừa tải${CYAN}                     │${NC}"
-            echo -e "${CYAN}│  ${YELLOW}2. Quay lại phát tập hiện tại${CYAN}             │${NC}"
-            echo -e "${CYAN}│  ${YELLOW}3. Mở thư mục chứa video${CYAN}                 │${NC}"
-            echo -e "${CYAN}│  ${RED}0. Quay lại menu trước${CYAN}                    │${NC}"
-            echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+            show_header
             
-            read -r -p "Chọn một tùy chọn: " choice
+            local options=(
+                "${SYM_PLAY} 1. Phát video vừa tải" "Phát video đã tải xuống"
+                "${SYM_PLAY} 2. Quay lại phát tập hiện tại" "Tiếp tục xem tập hiện tại"
+                "${SYM_FOLDER} 3. Mở thư mục chứa video" "Mở thư mục chứa file đã tải"
+                "${SYM_EXIT} 0. Quay lại menu trước" "Quay lại menu trước đó"
+            )
+            
+            show_menu "${options[@]}"
+            
+            read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+            log "USER" "Lựa chọn sau khi tải" "$choice"
             
             case $choice in
                 1)
                     local video_file=$(find "$output_dir" -name "$title*.mp4" | head -n 1)
                     if [[ -f "$video_file" ]]; then
-                        play_with_mpv "$video_file" "$title (Đã tải)"
+                        play_video "$video_file" "$title (Đã tải)"
                         log "PLAY" "Phát video đã tải: $title"
                     else
-                        error "Không tìm thấy file video đã tải"
+                        error "${SYM_ERROR} Không tìm thấy file video đã tải"
+                        log "ERROR" "Không tìm thấy file video: $title"
                     fi
                     ;;
                 2)
                     # Quay lại phát tập hiện tại
+                    log "NAVIGATE" "Quay lại phát tập hiện tại"
                     return 2
                     ;;
                 3)
-                    if command -v xdg-open &> /dev/null; then
-                        xdg-open "$output_dir"
-                    elif command -v open &> /dev/null; then
-                        open "$output_dir"
-                    else
-                        warn "Không thể mở thư mục tự động"
-                        echo "Thư mục chứa video: $output_dir"
-                    fi
+                    log "SYSTEM" "Mở thư mục chứa video"
+                    case "$OS" in
+                        "Linux"|"Android/Termux")
+                            xdg-open "$output_dir" || open "$output_dir"
+                            ;;
+                        "macOS")
+                            open "$output_dir"
+                            ;;
+                        "Windows")
+                            explorer "$(cygpath -w "$output_dir")"
+                            ;;
+                        *)
+                            echo "Thư mục chứa video: $output_dir"
+                            ;;
+                    esac
                     ;;
                 0)
+                    log "NAVIGATE" "Quay lại menu trước"
                     return
                     ;;
                 *)
-                    warn "Lựa chọn không hợp lệ"
+                    warn "${SYM_WARNING} Lựa chọn không hợp lệ"
+                    log "WARN" "Lựa chọn không hợp lệ sau khi tải: $choice"
                     ;;
             esac
         done
     else
-        error "Tải video thất bại"
-        log "ERROR" "Tải video thất bại: $title"
+        error "${SYM_ERROR} Tải video thất bại"
+        log "ERROR" "Tải video thất bại: $title (URL: $url)"
         return 1
     fi
 }
@@ -565,23 +1058,28 @@ cut_video() {
     local url="$1"
     local title="$2"
     local output_dir="$DOWNLOAD_DIR/cut"
+    log "TOOLS" "Bắt đầu cắt video: $title (URL: $url)"
     
     if ! command -v yt-dlp &> /dev/null || ! command -v ffmpeg &> /dev/null; then
-        error "Cần cài đặt yt-dlp và ffmpeg để sử dụng tính năng này"
+        error "${SYM_ERROR} Cần cài đặt yt-dlp và ffmpeg để sử dụng tính năng này"
+        log "ERROR" "Thiếu yt-dlp hoặc ffmpeg"
         return 1
     fi
     
     mkdir -p "$output_dir"
     
     local cut_option=$(echo -e "Cắt 1 lần\nCắt nhiều lần" | fzf --prompt="Chọn chế độ cắt: ")
+    log "USER" "Chọn chế độ cắt" "$cut_option"
     
     case "$cut_option" in
         "Cắt 1 lần")
             read -r -p "Nhập thời gian bắt đầu (định dạng HH:MM:SS hoặc MM:SS): " start_time
             read -r -p "Nhập thời gian kết thúc (định dạng HH:MM:SS hoặc MM:SS): " end_time
+            log "USER" "Nhập thời gian cắt" "Start: $start_time, End: $end_time"
+            
             local output_file="$output_dir/${title}_cut_$(date +%s).mp4"
             
-            notify "Đang cắt video từ $start_time đến $end_time..."
+            notify "${SYM_CUT} Đang cắt video từ $start_time đến $end_time..."
             yt-dlp --download-sections "*${start_time}-${end_time}" \
                 -o "$output_file" \
                 --no-progress \
@@ -589,21 +1087,26 @@ cut_video() {
                 "$url"
             
             if [[ $? -eq 0 ]]; then
-                notify "Đã cắt và lưu video tại: $output_file"
+                notify "${SYM_SUCCESS} Đã cắt và lưu video tại: $output_file"
+                log "TOOLS" "Cắt video thành công: $output_file"
             else
-                error "Cắt video thất bại"
+                error "${SYM_ERROR} Cắt video thất bại"
+                log "ERROR" "Cắt video thất bại: $title"
             fi
             ;;
         "Cắt nhiều lần")
             read -r -p "Nhập số lượng phân đoạn muốn cắt: " num_segments
+            log "USER" "Số lượng phân đoạn cắt" "$num_segments"
             
             for ((i=1; i<=num_segments; i++)); do
                 echo "Phân đoạn $i:"
                 read -r -p "Nhập thời gian bắt đầu (định dạng HH:MM:SS hoặc MM:SS): " start_time
                 read -r -p "Nhập thời gian kết thúc (định dạng HH:MM:SS hoặc MM:SS): " end_time
+                log "USER" "Phân đoạn $i thời gian" "Start: $start_time, End: $end_time"
+                
                 local output_file="$output_dir/${title}_cut_${i}_$(date +%s).mp4"
                 
-                notify "Đang cắt video từ $start_time đến $end_time..."
+                notify "${SYM_CUT} Đang cắt video từ $start_time đến $end_time..."
                 yt-dlp --download-sections "*${start_time}-${end_time}" \
                     -o "$output_file" \
                     --no-progress \
@@ -611,14 +1114,17 @@ cut_video() {
                     "$url"
                 
                 if [[ $? -eq 0 ]]; then
-                    notify "Đã cắt và lưu phân đoạn $i tại: $output_file"
+                    notify "${SYM_SUCCESS} Đã cắt và lưu phân đoạn $i tại: $output_file"
+                    log "TOOLS" "Cắt phân đoạn $i thành công: $output_file"
                 else
-                    error "Cắt phân đoạn $i thất bại"
+                    error "${SYM_ERROR} Cắt phân đoạn $i thất bại"
+                    log "ERROR" "Cắt phân đoạn $i thất bại: $title"
                 fi
             done
             ;;
         *)
-            warn "Lựa chọn không hợp lệ"
+            warn "${SYM_WARNING} Lựa chọn không hợp lệ"
+            log "WARN" "Lựa chọn chế độ cắt không hợp lệ"
             ;;
     esac
 }
@@ -627,94 +1133,148 @@ cut_video() {
 merge_videos() {
     local output_dir="$DOWNLOAD_DIR/merged"
     mkdir -p "$output_dir"
+    log "TOOLS" "Bắt đầu ghép video"
     
     local merge_option=$(echo -e "Ghép 1 lần\nGhép nhiều lần" | fzf --prompt="Chọn chế độ ghép: ")
+    log "USER" "Chọn chế độ ghép" "$merge_option"
     
     case "$merge_option" in
         "Ghép 1 lần")
             read -r -p "Nhập số lượng video muốn ghép: " num_videos
+            log "USER" "Số lượng video ghép" "$num_videos"
             local video_files=()
             
             for ((i=1; i<=num_videos; i++)); do
                 local selected=$(find "$DOWNLOAD_DIR" -type f \( -name "*.mp4" -o -name "*.mkv" \) | fzf --prompt="Chọn video $i: ")
                 if [[ -z "$selected" ]]; then
-                    warn "Không có video nào được chọn"
+                    warn "${SYM_WARNING} Không có video nào được chọn"
+                    log "WARN" "Không chọn video $i"
                     return 1
                 fi
                 video_files+=("$selected")
+                log "USER" "Chọn video $i" "$selected"
             done
             
             local output_file="$output_dir/merged_$(date +%s).mp4"
             
-            notify "Đang ghép ${#video_files[@]} video..."
+            notify "${SYM_MERGE} Đang ghép ${#video_files[@]} video..."
             ffmpeg -f concat -safe 0 -i <(for f in "${video_files[@]}"; do echo "file '$f'"; done) \
                 -c copy \
                 "$output_file" \
                 -y
             
             if [[ $? -eq 0 ]]; then
-                notify "Đã ghép và lưu video tại: $output_file"
+                notify "${SYM_SUCCESS} Đã ghép và lưu video tại: $output_file"
+                log "TOOLS" "Ghép video thành công: $output_file"
             else
-                error "Ghép video thất bại"
+                error "${SYM_ERROR} Ghép video thất bại"
+                log "ERROR" "Ghép video thất bại"
             fi
             ;;
         "Ghép nhiều lần")
             read -r -p "Nhập số lượng vòng lặp ghép: " num_loops
+            log "USER" "Số vòng lặp ghép" "$num_loops"
             
             for ((loop=1; loop<=num_loops; loop++)); do
                 echo "Vòng lặp ghép thứ $loop:"
                 read -r -p "Nhập số lượng video muốn ghép: " num_videos
+                log "USER" "Vòng lặp $loop, số video" "$num_videos"
                 local video_files=()
                 
                 for ((i=1; i<=num_videos; i++)); do
                     local selected=$(find "$DOWNLOAD_DIR" -type f \( -name "*.mp4" -o -name "*.mkv" \) | fzf --prompt="Chọn video $i: ")
                     if [[ -z "$selected" ]]; then
-                        warn "Không có video nào được chọn"
+                        warn "${SYM_WARNING} Không có video nào được chọn"
+                        log "WARN" "Không chọn video $i trong vòng $loop"
                         continue 2
                     fi
                     video_files+=("$selected")
+                    log "USER" "Chọn video $i vòng $loop" "$selected"
                 done
                 
                 local output_file="$output_dir/merged_loop${loop}_$(date +%s).mp4"
                 
-                notify "Đang ghép ${#video_files[@]} video..."
+                notify "${SYM_MERGE} Đang ghép ${#video_files[@]} video..."
                 ffmpeg -f concat -safe 0 -i <(for f in "${video_files[@]}"; do echo "file '$f'"; done) \
                     -c copy \
                     "$output_file" \
                     -y
                 
                 if [[ $? -eq 0 ]]; then
-                    notify "Đã ghép và lưu video tại: $output_file"
+                    notify "${SYM_SUCCESS} Đã ghép và lưu video tại: $output_file"
+                    log "TOOLS" "Ghép video vòng $loop thành công: $output_file"
                 else
-                    error "Ghép video thất bại"
+                    error "${SYM_ERROR} Ghép video thất bại"
+                    log "ERROR" "Ghép video vòng $loop thất bại"
                 fi
             done
             ;;
         *)
-            warn "Lựa chọn không hợp lệ"
+            warn "${SYM_WARNING} Lựa chọn không hợp lệ"
+            log "WARN" "Lựa chọn chế độ ghép không hợp lệ"
             ;;
     esac
+}
+
+# ============================ PHÁT VIDEO TỪ YOUTUBE ============================
+play_from_youtube() {
+    local query="$1"
+    log "STREAM" "Tìm kiếm trên YouTube: $query"
+    notify "${SYM_SEARCH} Đang tìm kiếm trên YouTube: $query"
+    
+    local video_url=$(yt-dlp --get-url "ytsearch:$query")
+    if [[ -z "$video_url" ]]; then
+        error "${SYM_ERROR} Không tìm thấy video trên YouTube"
+        log "ERROR" "Không tìm thấy video YouTube: $query"
+        return 1
+    fi
+    
+    play_video "$video_url" "YouTube: $query"
+}
+
+# ============================ PHÁT VIDEO TỪ BILIBILI ============================
+play_from_bilibili() {
+    local query="$1"
+    log "STREAM" "Tìm kiếm trên Bilibili: $query"
+    notify "${SYM_SEARCH} Đang tìm kiếm trên Bilibili: $query"
+    
+    if ! command -v bilibili-dl &> /dev/null; then
+        warn "${SYM_WARNING} Cần cài đặt bilibili-dl để sử dụng tính năng này"
+        log "ERROR" "Thiếu bilibili-dl"
+        return 1
+    fi
+    
+    local video_url=$(bilibili-dl --get-url "$query")
+    if [[ -z "$video_url" ]]; then
+        error "${SYM_ERROR} Không tìm thấy video trên Bilibili"
+        log "ERROR" "Không tìm thấy video Bilibili: $query"
+        return 1
+    fi
+    
+    play_video "$video_url" "Bilibili: $query"
 }
 
 # ============================ HIỂN THỊ MENU CHÍNH CỦA ANISUB ============================
 main_menu() {
     while true; do
-        clear
-        echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-        echo -e "${CYAN}│            ${MAGENTA}ANISUB v$VERSION${CYAN}              │${NC}"
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-        echo -e "${CYAN}│  ${YELLOW}1. Tìm kiếm và phát anime${CYAN}                     │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}2. Lịch sử xem${CYAN}                               │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}3. Danh sách yêu thích${CYAN}                       │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}4. Công cụ video (cắt/ghép)${CYAN}                 │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}5. Đọc manga${CYAN}                                │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}6. Cài đặt${CYAN}                                  │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}7. Kiểm tra cập nhật${CYAN}                        │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}8. Thông tin tác giả${CYAN}                        │${NC}"
-        echo -e "${CYAN}│  ${RED}0. Thoát${CYAN}                                      │${NC}"
-        echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+        show_header
         
-        read -r -p "Chọn một tùy chọn: " choice
+        local options=(
+            "${SYM_SEARCH} 1. Tìm kiếm và phát anime" "Tìm kiếm và xem anime từ nhiều nguồn"
+            "${SYM_HIST} 2. Lịch sử xem" "Xem lịch sử các tập đã xem"
+            "${SYM_FAV} 3. Danh sách yêu thích" "Quản lý danh sách anime yêu thích"
+            "${SYM_TOOLS} 4. Công cụ video" "Cắt, ghép và chỉnh sửa video"
+            "${SYM_MANGA} 5. Đọc manga" "Đọc manga trực tuyến (beta)"
+            "${SYM_SETTINGS} 6. Cài đặt" "Thay đổi cấu hình hệ thống"
+            "${SYM_UPDATE} 7. Kiểm tra cập nhật" "Kiểm tra và cập nhật phiên bản mới"
+            "${SYM_INFO} 8. Thông tin tác giả" "Thông tin về nhà phát triển"
+            "${SYM_EXIT} 0. Thoát" "Thoát chương trình"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn menu chính" "$choice"
         
         case $choice in
             1) 
@@ -755,7 +1315,7 @@ main_menu() {
                 exit 0 
                 ;;
             *) 
-                warn "Lựa chọn không hợp lệ, vui lòng chọn lại"
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ, vui lòng chọn lại"
                 log "WARN" "Lựa chọn không hợp lệ: $choice"
                 ;;
         esac
@@ -765,71 +1325,101 @@ main_menu() {
 # ============================ HIỂN THỊ MENU TÌM KIẾM VÀ PHÁT VIDEO ============================
 search_and_play_menu() {
     while true; do
-        clear
-        echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-        echo -e "${CYAN}│           ${MAGENTA}TÌM KIẾM VÀ PHÁT ANIME${CYAN}            │${NC}"
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-        echo -e "${CYAN}│  ${YELLOW}1. Tìm kiếm từ OPhim${CYAN}                        │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}2. Tìm kiếm từ AniData${CYAN}                      │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}3. Nhập URL trực tiếp${CYAN}                       │${NC}"
-        echo -e "${CYAN}│  ${RED}0. Quay lại${CYAN}                                  │${NC}"
-        echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+        show_header
         
-        read -r -p "Chọn một tùy chọn: " choice
+        local options=(
+            "${SYM_SEARCH} 1. Tìm kiếm từ OPhim17" "Tìm kiếm anime từ nguồn OPhim17"
+            "${SYM_SEARCH} 2. Tìm kiếm từ AniData" "Tìm kiếm anime từ nguồn AniData"
+            "${SYM_SEARCH} 3. Tìm kiếm từ YouTube" "Tìm kiếm anime từ YouTube"
+            "${SYM_SEARCH} 4. Tìm kiếm từ Bilibili" "Tìm kiếm anime từ Bilibili"
+            "${SYM_PLAY} 5. Nhập URL trực tiếp" "Phát trực tiếp từ URL video"
+            "${SYM_EXIT} 0. Quay lại" "Quay lại menu chính"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn menu tìm kiếm" "$choice"
         
         case $choice in
-            1) search_ophim ;;
+            1) search_ophim17 ;;
             2) search_anidata ;;
-            3) play_from_url ;;
-            0) return ;;
-            *) warn "Lựa chọn không hợp lệ, vui lòng chọn lại" ;;
+            3) 
+                read -p "Nhập từ khóa tìm kiếm trên YouTube: " query
+                log "USER" "Tìm kiếm YouTube" "$query"
+                play_from_youtube "$query" 
+                ;;
+            4) 
+                read -p "Nhập từ khóa tìm kiếm trên Bilibili: " query
+                log "USER" "Tìm kiếm Bilibili" "$query"
+                play_from_bilibili "$query"
+                ;;
+            5) play_from_url ;;
+            0) 
+                log "NAVIGATE" "Quay lại menu chính"
+                return 
+                ;;
+            *) 
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ, vui lòng chọn lại"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
+                ;;
         esac
     done
 }
 
-# ============================ TÌM KIẾM TỪ OPHIM ============================
-search_ophim() {
-    read -r -p "Nhập từ khóa tìm kiếm: " keyword
+# ============================ TÌM KIẾM TỪ OPHIM17 ============================
+search_ophim17() {
+    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập từ khóa tìm kiếm: " keyword
+    log "USER" "Tìm kiếm OPhim17" "$keyword"
+    
     if [[ -z "$keyword" ]]; then
-        warn "Từ khóa không được để trống"
+        warn "${SYM_WARNING} Từ khóa không được để trống"
+        log "WARN" "Từ khóa tìm kiếm trống"
         return
     fi
     
-    local anime_list=$(search_anime_ophim "$keyword")
+    local anime_list=$(search_anime_ophim17 "$keyword")
     
     if [[ -z "$anime_list" ]]; then
-        warn "Không tìm thấy anime nào với từ khóa '$keyword'"
+        warn "${SYM_WARNING} Không tìm thấy anime nào với từ khóa '$keyword'"
+        log "SEARCH" "Không tìm thấy kết quả cho: $keyword"
         return
     fi
     
     local selected_anime=$(echo "$anime_list" | fzf --prompt="Chọn anime: " --preview "echo {} | sed 's/.*(//;s/)//' | xargs -I{} curl -s {} | pup 'p.description text{}'")
+    log "USER" "Chọn anime" "$selected_anime"
     
     if [[ -z "$selected_anime" ]]; then
-        warn "Không có anime nào được chọn"
+        warn "${SYM_WARNING} Không có anime nào được chọn"
+        log "WARN" "Không chọn anime"
         return
     fi
     
     local anime_url=$(echo "$selected_anime" | sed 's/.*(\(.*\))/\1/')
     local anime_name=$(echo "$selected_anime" | sed 's/^[^(]*(\([^)]*\)) \+//;s/ ([^ ]*)$//')
     
-    play_anime_ophim "$anime_url" "$anime_name"
+    play_anime_ophim17 "$anime_url" "$anime_name"
 }
 
-# ============================ PHÁT VIDEO ĐÓ TỪ OPHIM ============================
-play_anime_ophim() {
+# ============================ PHÁT VIDEO ĐÓ TỪ OPHIM17 ============================
+play_anime_ophim17() {
     local anime_url="$1"
     local anime_name="$2"
+    log "STREAM" "Phát anime từ OPhim17: $anime_name (URL: $anime_url)"
     
-    local episode_list=$(get_episode_list_ophim "$anime_url")
+    local episode_list=$(get_episode_list_ophim17 "$anime_url")
     if [[ -z "$episode_list" ]]; then
-        error "Không thể lấy danh sách tập phim"
+        error "${SYM_ERROR} Không thể lấy danh sách tập phim"
+        log "ERROR" "Không lấy được danh sách tập phim"
         return
     fi
     
     local selected_episode=$(echo "$episode_list" | fzf --prompt="Chọn tập phim: " --preview "echo {} | cut -d'|' -f2")
+    log "USER" "Chọn tập phim" "$selected_episode"
     
     if [[ -z "$selected_episode" ]]; then
-        warn "Không có tập nào được chọn"
+        warn "${SYM_WARNING} Không có tập nào được chọn"
+        log "WARN" "Không chọn tập phim"
         return
     fi
     
@@ -840,32 +1430,34 @@ play_anime_ophim() {
     add_to_history "$anime_name" "$episode_title"
     
     while true; do
-        clear
-        echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-        echo -e "${CYAN}│         ${MAGENTA}ĐANG PHÁT: $anime_name${CYAN}              │${NC}"
-        echo -e "${CYAN}│         ${YELLOW}Tập $episode_number: $episode_title${CYAN}  │${NC}"
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-        echo -e "${CYAN}│  ${YELLOW}1. Phát tập này${CYAN}                            │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}2. Phát tập tiếp theo${CYAN}                      │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}3. Phát tập trước đó${CYAN}                       │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}4. Chọn tập khác${CYAN}                           │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}5. Tải tập này xuống${CYAN}                       │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}6. Thêm vào yêu thích${CYAN}                      │${NC}"
-        echo -e "${CYAN}│  ${RED}0. Quay lại${CYAN}                                  │${NC}"
-        echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+        show_header
         
-        read -r -p "Chọn một tùy chọn: " choice
+        local options=(
+            "${SYM_PLAY} 1. Phát tập này" "Phát tập hiện tại"
+            "${SYM_NEXT} 2. Phát tập tiếp theo" "Chuyển đến tập tiếp theo"
+            "${SYM_PREV} 3. Phát tập trước đó" "Quay lại tập trước đó"
+            "${SYM_SELECT} 4. Chọn tập khác" "Chọn tập phim khác"
+            "${SYM_DOWNLOAD} 5. Tải tập này xuống" "Tải tập phim về thiết bị"
+            "${SYM_FAV} 6. Thêm vào yêu thích" "Thêm anime vào danh sách yêu thích"
+            "${SYM_EXIT} 0. Quay lại" "Quay lại menu tìm kiếm"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn khi xem phim" "$choice"
         
         case $choice in
             1)
-                play_with_mpv "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
+                play_video "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
                 ;;
             2)
                 next_episode_number=$((episode_number + 1))
                 local next_episode=$(echo "$episode_list" | grep "^$next_episode_number|")
                 
                 if [[ -z "$next_episode" ]]; then
-                    warn "Không có tập tiếp theo"
+                    warn "${SYM_WARNING} Không có tập tiếp theo"
+                    log "WARN" "Không có tập tiếp theo"
                     continue
                 fi
                 
@@ -873,14 +1465,15 @@ play_anime_ophim() {
                 episode_url=$(echo "$next_episode" | cut -d'|' -f2)
                 episode_title=$(get_episode_title "$anime_url" "$episode_number")
                 add_to_history "$anime_name" "$episode_title"
-                play_with_mpv "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
+                play_video "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
                 ;;
             3)
                 previous_episode_number=$((episode_number - 1))
                 local previous_episode=$(echo "$episode_list" | grep "^$previous_episode_number|")
                 
                 if [[ -z "$previous_episode" || $previous_episode_number -lt 1 ]]; then
-                    warn "Không có tập trước đó"
+                    warn "${SYM_WARNING} Không có tập trước đó"
+                    log "WARN" "Không có tập trước đó"
                     continue
                 fi
                 
@@ -888,13 +1481,15 @@ play_anime_ophim() {
                 episode_url=$(echo "$previous_episode" | cut -d'|' -f2)
                 episode_title=$(get_episode_title "$anime_url" "$episode_number")
                 add_to_history "$anime_name" "$episode_title"
-                play_with_mpv "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
+                play_video "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
                 ;;
             4)
                 selected_episode=$(echo "$episode_list" | fzf --prompt="Chọn tập phim: " --preview "echo {} | cut -d'|' -f2")
+                log "USER" "Chọn tập phim khác" "$selected_episode"
                 
                 if [[ -z "$selected_episode" ]]; then
-                    warn "Không có tập nào được chọn"
+                    warn "${SYM_WARNING} Không có tập nào được chọn"
+                    log "WARN" "Không chọn tập phim"
                     continue
                 fi
                 
@@ -902,23 +1497,25 @@ play_anime_ophim() {
                 episode_url=$(echo "$selected_episode" | cut -d'|' -f2)
                 episode_title=$(get_episode_title "$anime_url" "$episode_number")
                 add_to_history "$anime_name" "$episode_title"
-                play_with_mpv "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
+                play_video "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
                 ;;
             5)
                 download_video "$episode_url" "$anime_name - Tập $episode_number: $episode_title" "$DOWNLOAD_DIR/$anime_name" "$anime_name"
                 if [[ $? -eq 2 ]]; then
-                # Nếu người dùng chọn quay lại phát tập hiện tại
-                play_with_mpv "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
-            fi
+                    # Nếu người dùng chọn quay lại phát tập hiện tại
+                    play_video "$episode_url" "$anime_name - Tập $episode_number: $episode_title"
+                fi
                 ;;
             6)
                 add_to_favorites "$anime_name"
                 ;;
             0)
+                log "NAVIGATE" "Quay lại menu tìm kiếm"
                 return
                 ;;
             *)
-                warn "Lựa chọn không hợp lệ, vui lòng chọn lại"
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ, vui lòng chọn lại"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
                 ;;
         esac
     done
@@ -926,37 +1523,45 @@ play_anime_ophim() {
 
 # ============================ TÌM KIẾM TỪ ANIDATA (@NiyakiPham QUẢN LÝ) ============================
 search_anidata() {
+    log "SEARCH" "Tìm kiếm từ AniData"
     local anime_list=$(get_anime_list_anidata)
     
     if [[ -z "$anime_list" ]]; then
-        warn "Không thể lấy danh sách anime từ AniData"
+        error "${SYM_ERROR} Không thể lấy danh sách anime từ AniData"
+        log "ERROR" "Không lấy được danh sách từ AniData"
         return
     fi
     
     local selected_anime=$(echo "$anime_list" | fzf --prompt="Chọn anime: ")
+    log "USER" "Chọn anime từ AniData" "$selected_anime"
     
     if [[ -z "$selected_anime" ]]; then
-        warn "Không có anime nào được chọn"
+        warn "${SYM_WARNING} Không có anime nào được chọn"
+        log "WARN" "Không chọn anime từ AniData"
         return
     fi
     
     play_anime_anidata "$selected_anime"
 }
 
-# ============================ PHÁT VIDEO ĐÓ TỪ ANISUB (@NiyakiPham QUẢN LÝ) ============================
+# ============================ PHÁT VIDEO ĐÓ TỪ ANIDATA (@NiyakiPham QUẢN LÝ) ============================
 play_anime_anidata() {
     local anime_name="$1"
+    log "STREAM" "Phát anime từ AniData: $anime_name"
     
     local episode_list=$(get_episode_list_anidata "$anime_name")
     if [[ -z "$episode_list" ]]; then
-        error "Không thể lấy danh sách tập phim"
+        error "${SYM_ERROR} Không thể lấy danh sách tập phim"
+        log "ERROR" "Không lấy được danh sách tập từ AniData"
         return
     fi
     
     local selected_episode=$(echo "$episode_list" | fzf --prompt="Chọn tập phim: ")
+    log "USER" "Chọn tập phim từ AniData" "$selected_episode"
     
     if [[ -z "$selected_episode" ]]; then
-        warn "Không có tập nào được chọn"
+        warn "${SYM_WARNING} Không có tập nào được chọn"
+        log "WARN" "Không chọn tập phim từ AniData"
         return
     fi
     
@@ -966,163 +1571,167 @@ play_anime_anidata() {
     add_to_history "$anime_name" "$episode_title"
     
     while true; do
-        clear
-        echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-        echo -e "${CYAN}│         ${MAGENTA}ĐANG PHÁT: $anime_name${CYAN}              │${NC}"
-        echo -e "${CYAN}│         ${YELLOW}$episode_title${CYAN}                       │${NC}"
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-        echo -e "${CYAN}│  ${YELLOW}1. Phát tập này${CYAN}                            │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}2. Tải tập này xuống${CYAN}                       │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}3. Thêm vào yêu thích${CYAN}                      │${NC}"
-        echo -e "${CYAN}│  ${RED}0. Quay lại${CYAN}                                  │${NC}"
-        echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+        show_header
         
-        read -r -p "Chọn một tùy chọn: " choice
+        local options=(
+            "${SYM_PLAY} 1. Phát tập này" "Phát tập hiện tại"
+            "${SYM_DOWNLOAD} 2. Tải tập này xuống" "Tải tập phim về thiết bị"
+            "${SYM_FAV} 3. Thêm vào yêu thích" "Thêm anime vào danh sách yêu thích"
+            "${SYM_EXIT} 0. Quay lại" "Quay lại menu tìm kiếm"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn khi xem phim từ AniData" "$choice"
         
         case $choice in
             1)
-                play_with_mpv "$episode_url" "$anime_name - $episode_title"
+                play_video "$episode_url" "$anime_name - $episode_title"
                 ;;
             2)
                 download_video "$episode_url" "$anime_name - $episode_title" "$DOWNLOAD_DIR/$anime_name" "$anime_name"
                 if [[ $? -eq 2 ]]; then
-                play_with_mpv "$episode_url" "$anime_name - $episode_title"
-            fi
+                    play_video "$episode_url" "$anime_name - $episode_title"
+                fi
                 ;;
             3)
                 add_to_favorites "$anime_name"
                 ;;
             0)
+                log "NAVIGATE" "Quay lại menu tìm kiếm"
                 return
                 ;;
             *)
-                warn "Lựa chọn không hợp lệ, vui lòng chọn lại"
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ, vui lòng chọn lại"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
                 ;;
         esac
     done
 }
 
-# ============================ PHÁT VIDEO TỪ URL TRỰC TIẾP (TỪ OPHIM HOẶC ANIDATA (@NiyakiPham QUẢN LÝ)) ============================
+# ============================ PHÁT VIDEO TỪ URL TRỰC TIẾP ============================
 play_from_url() {
-    read -r -p "Nhập URL anime (OPhim hoặc AniData): " url
+    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập URL anime (OPhim17 hoặc AniData): " url
+    log "USER" "Nhập URL trực tiếp" "$url"
+    
     if [[ -z "$url" ]]; then
-        warn "URL không được để trống"
+        warn "${SYM_WARNING} URL không được để trống"
+        log "WARN" "URL trống"
         return
     fi
     
     if [[ "$url" == *"ophim17.cc"* ]]; then
         local anime_name=$(curl -s "$url" | pup 'h1 text{}' | tr -d '\n')
-        play_anime_ophim "$url" "$anime_name"
+        play_anime_ophim17 "$url" "$anime_name"
     elif [[ "$url" == *"raw.githubusercontent.com/toilamsao/anidata"* ]]; then
-        warn "Vui lòng sử dụng tùy chọn tìm kiếm AniData thay vì nhập URL trực tiếp"
+        warn "${SYM_WARNING} Vui lòng sử dụng tùy chọn tìm kiếm AniData thay vì nhập URL trực tiếp"
+        log "WARN" "Nhập URL AniData trực tiếp"
     else
-        warn "URL không được hỗ trợ. Chỉ hỗ trợ OPhim và AniData."
+        warn "${SYM_WARNING} URL không được hỗ trợ. Chỉ hỗ trợ OPhim17 và AniData."
+        log "WARN" "URL không được hỗ trợ: $url"
     fi
 }
 
-# ============================ HIỂN THỊ MENI LỊCH SỬ XEM ============================
+# ============================ HIỂN THỊ MENU LỊCH SỬ XEM ============================
 history_menu() {
     while true; do
-        clear
-        echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-        echo -e "${CYAN}│               ${MAGENTA}LỊCH SỬ XEM${CYAN}                  │${NC}"
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
+        show_header
         
         local history_list=$(show_history)
+        local content=""
+        
         if [[ -z "$history_list" ]]; then
-            echo -e "${CYAN}│  ${YELLOW}Không có lịch sử xem${CYAN}                    │${NC}"
+            content="Không có lịch sử xem."
         else
-            local i=1
-            while IFS= read -r line; do
-                if [[ $i -le 5 ]]; then
-                    echo -e "${CYAN}│  ${YELLOW}$line${CYAN}" | awk '{printf "%-40s", $0}' | sed 's/$/│/'
-                fi
-                i=$((i + 1))
-            done <<< "$history_list"
+            content="$history_list"
         fi
         
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-        echo -e "${CYAN}│  ${YELLOW}1. Xem toàn bộ lịch sử${CYAN}                      │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}2. Xóa lịch sử${CYAN}                             │${NC}"
-        echo -e "${CYAN}│  ${RED}0. Quay lại${CYAN}                                  │${NC}"
-        echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+        draw_box 60 "LỊCH SỬ XEM" "$SECONDARY" "$content"
         
-        read -r -p "Chọn một tùy chọn: " choice
+        local options=(
+            "${SYM_SEARCH} 1. Xem toàn bộ lịch sử" "Hiển thị toàn bộ lịch sử xem"
+            "${SYM_DELETE} 2. Xóa lịch sử" "Xóa toàn bộ lịch sử xem"
+            "${SYM_EXIT} 0. Quay lại" "Quay lại menu chính"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn menu lịch sử" "$choice"
         
         case $choice in
             1)
                 clear
-                echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-                echo -e "${CYAN}│               ${MAGENTA}TOÀN BỘ LỊCH SỬ${CYAN}               │${NC}"
-                echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-                echo "$history_list" | more
-                echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+                draw_box 80 "TOÀN BỘ LỊCH SỬ" "$SECONDARY" "$history_list"
                 read -n 1 -s -r -p "Nhấn bất kỳ phím nào để tiếp tục..."
+                log "HISTORY" "Xem toàn bộ lịch sử"
                 ;;
             2)
                 > "$HISTORY_FILE"
-                notify "Đã xóa toàn bộ lịch sử"
+                notify "${SYM_SUCCESS} Đã xóa toàn bộ lịch sử"
+                log "HISTORY" "Xóa toàn bộ lịch sử"
                 ;;
             0)
+                log "NAVIGATE" "Quay lại menu chính"
                 return
                 ;;
             *)
-                warn "Lựa chọn không hợp lệ, vui lòng chọn lại"
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ, vui lòng chọn lại"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
                 ;;
         esac
     done
 }
 
-# ============================ HIỂN THỊ MENU YÊU THÍCH CỦA NGƯỜI DÙNG ============================
+# ============================ HIỂN THỊ MENU YÊU THÍCH ============================
 favorites_menu() {
     while true; do
-        clear
-        echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-        echo -e "${CYAN}│            ${MAGENTA}DANH SÁCH YÊU THÍCH${CYAN}            │${NC}"
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
+        show_header
         
         local favorites_list=$(show_favorites)
+        local content=""
+        
         if [[ -z "$favorites_list" ]]; then
-            echo -e "${CYAN}│  ${YELLOW}Không có anime nào trong danh sách yêu thích${CYAN}│${NC}"
+            content="Không có anime nào trong danh sách yêu thích."
         else
-            local i=1
-            while IFS= read -r line; do
-                if [[ $i -le 5 ]]; then
-                    echo -e "${CYAN}│  ${YELLOW}$line${CYAN}" | awk '{printf "%-40s", $0}' | sed 's/$/│/'
-                fi
-                i=$((i + 1))
-            done <<< "$favorites_list"
+            content="$favorites_list"
         fi
         
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-        echo -e "${CYAN}│  ${YELLOW}1. Xem toàn bộ yêu thích${CYAN}                   │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}2. Phát anime từ yêu thích${CYAN}                │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}3. Xóa anime khỏi yêu thích${CYAN}               │${NC}"
-        echo -e "${CYAN}│  ${RED}0. Quay lại${CYAN}                                  │${NC}"
-        echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+        draw_box 60 "DANH SÁCH YÊU THÍCH" "$SECONDARY" "$content"
         
-        read -r -p "Chọn một tùy chọn: " choice
+        local options=(
+            "${SYM_SEARCH} 1. Xem toàn bộ yêu thích" "Hiển thị toàn bộ danh sách yêu thích"
+            "${SYM_PLAY} 2. Phát anime từ yêu thích" "Chọn và phát anime từ danh sách yêu thích"
+            "${SYM_DELETE} 3. Xóa anime khỏi yêu thích" "Xóa anime khỏi danh sách yêu thích"
+            "${SYM_EXIT} 0. Quay lại" "Quay lại menu chính"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn menu yêu thích" "$choice"
         
         case $choice in
             1)
                 clear
-                echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-                echo -e "${CYAN}│            ${MAGENTA}TOÀN BỘ YÊU THÍCH${CYAN}              │${NC}"
-                echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-                echo "$favorites_list" | more
-                echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+                draw_box 80 "TOÀN BỘ YÊU THÍCH" "$SECONDARY" "$favorites_list"
                 read -n 1 -s -r -p "Nhấn bất kỳ phím nào để tiếp tục..."
+                log "FAVORITE" "Xem toàn bộ yêu thích"
                 ;;
             2)
                 if [[ -z "$favorites_list" ]]; then
-                    warn "Không có anime nào trong danh sách yêu thích"
+                    warn "${SYM_WARNING} Không có anime nào trong danh sách yêu thích"
+                    log "WARN" "Danh sách yêu thích trống"
                     continue
                 fi
                 
                 local selected_anime=$(echo "$favorites_list" | fzf --prompt="Chọn anime từ yêu thích: " | sed 's/^[0-9]*\. //')
+                log "USER" "Chọn anime từ yêu thích" "$selected_anime"
                 
                 if [[ -z "$selected_anime" ]]; then
-                    warn "Không có anime nào được chọn"
+                    warn "${SYM_WARNING} Không có anime nào được chọn"
+                    log "WARN" "Không chọn anime từ yêu thích"
                     continue
                 fi
                 
@@ -1131,74 +1740,90 @@ favorites_menu() {
                 if echo "$anime_list" | grep -q "^$selected_anime$"; then
                     play_anime_anidata "$selected_anime"
                 else
-                    # Nếu không có trong AniData, thử tìm trên OPhim
+                    # Nếu không có trong AniData, thử tìm trên OPhim17
                     local anime_name_encoded=$(echo "$selected_anime" | sed 's/ /+/g')
-                    local anime_list=$(search_anime_ophim "$anime_name_encoded")
+                    local anime_list=$(search_anime_ophim17 "$anime_name_encoded")
                     
                     if [[ -z "$anime_list" ]]; then
-                        warn "Không tìm thấy anime '$selected_anime' trên OPhim"
+                        warn "${SYM_WARNING} Không tìm thấy anime '$selected_anime' trên OPhim17"
+                        log "WARN" "Không tìm thấy anime trên OPhim17: $selected_anime"
                         continue
                     fi
                     
                     local selected_anime=$(echo "$anime_list" | fzf --prompt="Chọn anime: " \
-			--preview "echo 'Đang tải thô1ng tin...'; \
-			url=\$(echo {} | sed 's/.*(//;s/)//'); \
-			curl -s \"\$url\" | pup 'h1, p.description text{}' | tr '\n' ' '") # Đang bị lỗi chưa biết cách sửa
+                        --preview "echo 'Đang tải thông tin...'; \
+                        url=\$(echo {} | sed 's/.*(//;s/)//'); \
+                        curl -s \"\$url\" | pup 'h1, p.description text{}' | tr '\n' ' '")
+                    log "USER" "Chọn anime từ OPhim17" "$selected_anime"
                     
                     if [[ -z "$selected_anime" ]]; then
-                        warn "Không tìm thấy anime '$selected_anime' trên OPhim"
+                        warn "${SYM_WARNING} Không tìm thấy anime '$selected_anime' trên OPhim17"
+                        log "WARN" "Không chọn anime từ OPhim17"
                         continue
                     fi
                     
                     local anime_url=$(echo "$selected_anime" | sed 's/.*(\(.*\))/\1/')
                     local anime_name=$(echo "$selected_anime" | sed 's/^[^(]*(\([^)]*\)) \+//;s/ ([^ ]*)$//')
-                    play_anime_ophim "$anime_url" "$anime_name"
+                    play_anime_ophim17 "$anime_url" "$anime_name"
                 fi
                 ;;
             3)
                 if [[ -z "$favorites_list" ]]; then
-                    warn "Không có anime nào trong danh sách yêu thích"
+                    warn "${SYM_WARNING} Không có anime nào trong danh sách yêu thích"
+                    log "WARN" "Danh sách yêu thích trống"
                     continue
                 fi
                 
                 local selected_anime=$(echo "$favorites_list" | fzf --prompt="Chọn anime để xóa: " | sed 's/^[0-9]*\. //')
+                log "USER" "Chọn anime để xóa" "$selected_anime"
                 
                 if [[ -z "$selected_anime" ]]; then
-                    warn "Không có anime nào được chọn"
+                    warn "${SYM_WARNING} Không có anime nào được chọn"
+                    log "WARN" "Không chọn anime để xóa"
                     continue
                 fi
                 
                 remove_from_favorites "$selected_anime"
                 ;;
             0)
+                log "NAVIGATE" "Quay lại menu chính"
                 return
                 ;;
             *)
-                warn "Lựa chọn không hợp lệ, vui lòng chọn lại"
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ, vui lòng chọn lại"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
                 ;;
         esac
     done
 }
 
-# ============================ HIỂN THỊ MENU CÔNG CỤ VIDEO CHỈNH SỬA ============================
+# ============================ HIỂN THỊ MENU CÔNG CỤ VIDEO ============================
 video_tools_menu() {
     while true; do
-        clear
-        echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-        echo -e "${CYAN}│            ${MAGENTA}CÔNG CỤ VIDEO${CYAN}                  │${NC}"
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-        echo -e "${CYAN}│  ${YELLOW}1. Cắt video${CYAN}                              │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}2. Ghép video${CYAN}                             │${NC}"
-        echo -e "${CYAN}│  ${RED}0. Quay lại${CYAN}                                  │${NC}"
-        echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+        show_header
         
-        read -r -p "Chọn một tùy chọn: " choice
+        local options=(
+            "${SYM_CUT} 1. Cắt video" "Cắt video từ URL hoặc file đã tải"
+            "${SYM_MERGE} 2. Ghép video" "Ghép nhiều video thành một"
+            "${SYM_EXIT} 0. Quay lại" "Quay lại menu chính"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn menu công cụ video" "$choice"
         
         case $choice in
             1) cut_video_menu ;;
             2) merge_videos ;;
-            0) return ;;
-            *) warn "Lựa chọn không hợp lệ, vui lòng chọn lại" ;;
+            0) 
+                log "NAVIGATE" "Quay lại menu chính"
+                return 
+                ;;
+            *) 
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ, vui lòng chọn lại"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
+                ;;
         esac
     done
 }
@@ -1206,28 +1831,36 @@ video_tools_menu() {
 # ============================ HIỂN THỊ MENU CẮT VIDEO ============================
 cut_video_menu() {
     while true; do
-        clear
-        echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-        echo -e "${CYAN}│               ${MAGENTA}CẮT VIDEO${CYAN}                    │${NC}"
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-        echo -e "${CYAN}│  ${YELLOW}1. Cắt video từ URL${CYAN}                        │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}2. Cắt video từ file đã tải${CYAN}                │${NC}"
-        echo -e "${CYAN}│  ${RED}0. Quay lại${CYAN}                                  │${NC}"
-        echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+        show_header
         
-        read -r -p "Chọn một tùy chọn: " choice
+        local options=(
+            "${SYM_CUT} 1. Cắt video từ URL" "Cắt video trực tiếp từ URL"
+            "${SYM_CUT} 2. Cắt video từ file đã tải" "Cắt video đã tải về thiết bị"
+            "${SYM_EXIT} 0. Quay lại" "Quay lại menu công cụ video"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn menu cắt video" "$choice"
         
         case $choice in
             1)
-                read -r -p "Nhập URL video: " url
+                read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập URL video: " url
+                log "USER" "Nhập URL video để cắt" "$url"
+                
                 if [[ -z "$url" ]]; then
-                    warn "URL không được để trống"
+                    warn "${SYM_WARNING} URL không được để trống"
+                    log "WARN" "URL video trống"
                     continue
                 fi
                 
-                read -r -p "Nhập tiêu đề video: " title
+                read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập tiêu đề video: " title
                 if [[ -z "$title" ]]; then
                     title="Video_$(date +%s)"
+                    log "USER" "Sử dụng tiêu đề mặc định" "$title"
+                else
+                    log "USER" "Nhập tiêu đề video" "$title"
                 fi
                 
                 cut_video "$url" "$title"
@@ -1235,8 +1868,11 @@ cut_video_menu() {
                 ;;
             2)
                 local video_file=$(find "$DOWNLOAD_DIR" -type f \( -name "*.mp4" -o -name "*.mkv" \) | fzf --prompt="Chọn video: ")
+                log "USER" "Chọn video để cắt" "$video_file"
+                
                 if [[ -z "$video_file" ]]; then
-                    warn "Không có video nào được chọn"
+                    warn "${SYM_WARNING} Không có video nào được chọn"
+                    log "WARN" "Không chọn video"
                     continue
                 fi
                 
@@ -1245,55 +1881,107 @@ cut_video_menu() {
                 read -n 1 -s -r -p "Nhấn bất kỳ phím nào để tiếp tục..."
                 ;;
             0)
+                log "NAVIGATE" "Quay lại menu công cụ video"
                 return
                 ;;
             *)
-                warn "Lựa chọn không hợp lệ, vui lòng chọn lại"
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ, vui lòng chọn lại"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
                 ;;
         esac
     done
 }
 
-# ============================ HÀM ĐỌC MANGA (CHƯA NÂNG CẤP - SẼ NÂNG CẤP SAU KHI CÓ API THÍCH HỢP)============================
-# ???
+# ============================ HÀM ĐỌC MANGA ============================
 read_manga() {
+    log "MANGA" "Vào menu đọc manga"
+    if ! command -v manga-tui &> /dev/null; then
+        warn "${SYM_WARNING} Cần cài đặt manga-tui để sử dụng tính năng này"
+        log "ERROR" "Thiếu manga-tui"
+        
+        read -p "Bạn có muốn cài đặt manga-tui không? (y/N) " -n 1 -r
+        echo
+        log "USER" "Lựa chọn cài đặt manga-tui" "$REPLY"
+        
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            if command -v cargo &> /dev/null; then
+                notify "${SYM_INFO} Đang cài đặt manga-tui qua cargo..."
+                log "SYSTEM" "Cài đặt manga-tui qua cargo"
+                cargo install manga-tui
+            else
+                error "${SYM_ERROR} Không tìm thấy cargo, không thể cài đặt manga-tui"
+                log "ERROR" "Không tìm thấy cargo"
+                return
+            fi
+        else
+            return
+        fi
+    fi
+    
     clear
-    echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-    echo -e "${CYAN}│          ${MAGENTA}TÍNH NĂNG ĐANG PHÁT TRIỂN${CYAN}           │${NC}"
-    echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-    echo -e "${CYAN}│  ${YELLOW}Chức năng đọc manga đang được phát triển${CYAN}    │${NC}"
-    echo -e "${CYAN}│  ${YELLOW}Vui lòng chờ bản cập nhật sau!${CYAN}              │${NC}"
-    echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-    echo -e "${CYAN}│  ${YELLOW}Liên hệ: ${GREEN}@Kidtomboy${CYAN}                          │${NC}"
-    echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+    draw_box 60 "ĐỌC MANGA (BETA)" "$SECONDARY" "Tính năng đang trong giai đoạn phát triển"
     
-    # Ghi log
-    log "Người dùng truy cập tính năng đang phát triển (Đọc manga)"
+    local options=(
+        "${SYM_SEARCH} 1. Tìm kiếm manga" "Tìm kiếm manga để đọc"
+        "${SYM_HIST} 2. Danh sách theo dõi" "Xem danh sách manga đang theo dõi"
+        "${SYM_EXIT} 0. Quay lại" "Quay lại menu chính"
+    )
     
-    # Đợi người dùng nhấn phím
-    read -n 1 -s -r -p "Nhấn bất kỳ phím nào để quay lại menu chính..."
+    show_menu "${options[@]}"
     
-    # Quay về menu chính
-    return
+    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+    log "USER" "Lựa chọn menu manga" "$choice"
+    
+    case $choice in
+        1)
+            mkdir -p "$MANGA_DIR"
+            cd "$MANGA_DIR" || return
+            log "MANGA" "Chạy manga-tui tìm kiếm"
+            manga-tui
+            cd - || return
+            ;;
+        2)
+            mkdir -p "$MANGA_DIR"
+            cd "$MANGA_DIR" || return
+            log "MANGA" "Chạy manga-tui danh sách theo dõi"
+            manga-tui --followed
+            cd - || return
+            ;;
+        0)
+            log "NAVIGATE" "Quay lại menu chính"
+            return
+            ;;
+        *)
+            warn "${SYM_WARNING} Lựa chọn không hợp lệ"
+            log "WARN" "Lựa chọn không hợp lệ: $choice"
+            ;;
+    esac
 }
 
-# ============================ HIỂN THỊ MENU CỦA CÀI ĐẶT ============================
+# ============================ HIỂN THỊ MENU CÀI ĐẶT ============================
 settings_menu() {
     while true; do
-        clear
-        echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-        echo -e "${CYAN}│               ${MAGENTA}CÀI ĐẶT${CYAN}                     │${NC}"
-        echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-        echo -e "${CYAN}│  ${YELLOW}1. Thay đổi thư mục tải xuống${CYAN}             │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}2. Thay đổi trình phát mặc định${CYAN}           │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}3. Thay đổi chất lượng mặc định${CYAN}          │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}4. Thay đổi chủ đề${CYAN}                       │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}5. Bật/tắt thông báo${CYAN}                     │${NC}"
-        echo -e "${CYAN}│  ${YELLOW}6. Xóa cache${CYAN}                             │${NC}"
-        echo -e "${CYAN}│  ${RED}0. Quay lại${CYAN}                                  │${NC}"
-        echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
+        show_header
         
-        read -r -p "Chọn một tùy chọn: " choice
+        local options=(
+            "${SYM_FOLDER} 1. Thay đổi thư mục tải xuống" "Thay đổi nơi lưu video tải về"
+            "${SYM_PLAY} 2. Thay đổi trình phát mặc định" "Chọn trình phát video (mpv/vlc/ffplay)"
+            "${SYM_SETTINGS} 3. Thay đổi chất lượng mặc định" "Chọn chất lượng video (360p/480p/720p/1080p)"
+            "${SYM_SETTINGS} 4. Thay đổi chủ đề" "Thay đổi giao diện màu sắc"
+            "${SYM_SETTINGS} 5. Bật/tắt thông báo" "Bật hoặc tắt thông báo hệ thống"
+            "${SYM_SETTINGS} 6. Xóa cache" "Xóa toàn bộ dữ liệu cache"
+            "${SYM_SETTINGS} 7. Sao lưu cấu hình" "Sao lưu cấu hình hiện tại"
+            "${SYM_SETTINGS} 8. Khôi phục cấu hình" "Khôi phục từ bản sao lưu"
+            "${SYM_SETTINGS} 9. Bật/tắt kiểm tra phụ thuộc" "Bật hoặc tắt kiểm tra gói khi khởi động"
+            "${SYM_SETTINGS} 10. Cấu hình log" "Thay đổi cấu hình ghi log"
+            "${SYM_SETTINGS} 11. Bật/tắt gói tùy chọn" "Bật hoặc tắt cài đặt gói tùy chọn"
+            "${SYM_EXIT} 0. Quay lại" "Quay lại menu chính"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn menu cài đặt" "$choice"
         
         case $choice in
             1) change_download_dir ;;
@@ -1302,93 +1990,170 @@ settings_menu() {
             4) change_theme ;;
             5) toggle_notifications ;;
             6) clear_cache ;;
-            0) return ;;
-            *) warn "Lựa chọn không hợp lệ, vui lòng chọn lại" ;;
+            7) backup_config ;;
+            8) restore_config ;;
+            9) toggle_dependency_check ;;
+            10) configure_logging ;;
+            11) toggle_optional_packages ;;
+            0) 
+                log "NAVIGATE" "Quay lại menu chính"
+                return 
+                ;;
+            *) 
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ, vui lòng chọn lại"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
+                ;;
         esac
     done
 }
 
-# ============================ HÀM THAY ĐỔI THƯ MỤC TẢI XUỐNG CỦA NGƯỜI DÙNG ============================
+# ============================ THAY ĐỔI THƯ MỤC TẢI XUỐNG ============================
 change_download_dir() {
-    read -r -p "Nhập đường dẫn thư mục tải xuống mới: " new_dir
+    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập đường dẫn thư mục tải xuống mới: " new_dir
+    log "USER" "Nhập thư mục tải xuống mới" "$new_dir"
+    
     if [[ -z "$new_dir" ]]; then
-        warn "Đường dẫn không được để trống"
+        warn "${SYM_WARNING} Đường dẫn không được để trống"
+        log "WARN" "Thư mục tải xuống trống"
         return
     fi
     
     mkdir -p "$new_dir"
     if [[ ! -d "$new_dir" ]]; then
-        error "Không thể tạo thư mục $new_dir"
+        error "${SYM_ERROR} Không thể tạo thư mục $new_dir"
+        log "ERROR" "Không thể tạo thư mục: $new_dir"
         return
     fi
     
     sed -i "s|^DOWNLOAD_DIR=.*|DOWNLOAD_DIR=\"$new_dir\"|" "$CONFIG_FILE"
     DOWNLOAD_DIR="$new_dir"
-    notify "Đã thay đổi thư mục tải xuống thành: $new_dir"
+    notify "${SYM_SUCCESS} Đã thay đổi thư mục tải xuống thành: $new_dir"
+    log "SETTINGS" "Thay đổi thư mục tải xuống thành: $new_dir"
 }
 
-# ============================ HÀM THAY ĐỔI TRÌNH PHÁT MẶC ĐỊNH CỦA NGƯỜI DÙNG ============================
+# ============================ THAY ĐỔI TRÌNH PHÁT MẶC ĐỊNH ============================
 change_default_player() {
     local players=("mpv" "vlc" "ffplay")
     local selected=$(printf "%s\n" "${players[@]}" | fzf --prompt="Chọn trình phát mặc định: ")
+    log "USER" "Chọn trình phát mặc định" "$selected"
     
     if [[ -z "$selected" ]]; then
-        warn "Không có trình phát nào được chọn"
+        warn "${SYM_WARNING} Không có trình phát nào được chọn"
+        log "WARN" "Không chọn trình phát"
         return
     fi
     
     sed -i "s/^DEFAULT_PLAYER=.*/DEFAULT_PLAYER=\"$selected\"/" "$CONFIG_FILE"
     DEFAULT_PLAYER="$selected"
-    notify "Đã thay đổi trình phát mặc định thành: $selected"
+    notify "${SYM_SUCCESS} Đã thay đổi trình phát mặc định thành: $selected"
+    log "SETTINGS" "Thay đổi trình phát mặc định thành: $selected"
 }
 
-# ============================ HÀM THAY ĐỔI CHẤT LƯỢNG VIDEO MÀ NGƯỜI DÙNG YÊU CẦU ============================
+# ============================ THAY ĐỔI CHẤT LƯỢNG MẶC ĐỊNH ============================
 change_default_quality() {
     local qualities=("360p" "480p" "720p" "1080p")
     local selected=$(printf "%s\n" "${qualities[@]}" | fzf --prompt="Chọn chất lượng mặc định: ")
+    log "USER" "Chọn chất lượng mặc định" "$selected"
     
     if [[ -z "$selected" ]]; then
-        warn "Không có chất lượng nào được chọn"
+        warn "${SYM_WARNING} Không có chất lượng nào được chọn"
+        log "WARN" "Không chọn chất lượng"
         return
     fi
     
     sed -i "s/^DEFAULT_QUALITY=.*/DEFAULT_QUALITY=\"$selected\"/" "$CONFIG_FILE"
     DEFAULT_QUALITY="$selected"
-    notify "Đã thay đổi chất lượng mặc định thành: $selected"
+    notify "${SYM_SUCCESS} Đã thay đổi chất lượng mặc định thành: $selected"
+    log "SETTINGS" "Thay đổi chất lượng mặc định thành: $selected"
 }
 
-# ============================ HÀM THAY ĐỔI CHỦ ĐỀ/GIAO DIỆN TERMINAL (CHƯA TEST VÌ NGƯỜI CODE DÙNG KALI LINUX) ============================
+# ============================ THAY ĐỔI CHỦ ĐỀ ============================
 change_theme() {
     local themes=("dark" "light" "blue" "green" "red")
     local selected=$(printf "%s\n" "${themes[@]}" | fzf --prompt="Chọn chủ đề: ")
+    log "USER" "Chọn chủ đề" "$selected"
     
     if [[ -z "$selected" ]]; then
-        warn "Không có chủ đề nào được chọn"
+        warn "${SYM_WARNING} Không có chủ đề nào được chọn"
+        log "WARN" "Không chọn chủ đề"
         return
     fi
     
     sed -i "s/^THEME=.*/THEME=\"$selected\"/" "$CONFIG_FILE"
     THEME="$selected"
-    notify "Đã thay đổi chủ đề thành: $selected"
+    init_ui
+    notify "${SYM_SUCCESS} Đã thay đổi chủ đề thành: $selected"
+    log "SETTINGS" "Thay đổi chủ đề thành: $selected"
 }
 
-# ============================ HÀM BẬT TẮT THÔNG BÁO CỦA ANISUB ============================
+# ============================ BẬT/TẮT THÔNG BÁO ============================
 toggle_notifications() {
     if [[ "$NOTIFICATIONS" == "true" ]]; then
         sed -i "s/^NOTIFICATIONS=.*/NOTIFICATIONS=false/" "$CONFIG_FILE"
         NOTIFICATIONS="false"
-        notify "Đã tắt thông báo"
+        notify "${SYM_SUCCESS} Đã tắt thông báo"
+        log "SETTINGS" "Tắt thông báo"
     else
         sed -i "s/^NOTIFICATIONS=.*/NOTIFICATIONS=true/" "$CONFIG_FILE"
         NOTIFICATIONS="true"
-        notify "Đã bật thông báo"
+        notify "${SYM_SUCCESS} Đã bật thông báo"
+        log "SETTINGS" "Bật thông báo"
     fi
 }
 
-# ============================ XÓA CÁC FILE CACHE (BỘ NHỚ TẠM) ============================
+# ============================ BẬT/TẮT KIỂM TRA PHỤ THUỘC ============================
+toggle_dependency_check() {
+    if [[ "$SKIP_DEPENDENCY_CHECK" == "true" ]]; then
+        sed -i "s/^SKIP_DEPENDENCY_CHECK=.*/SKIP_DEPENDENCY_CHECK=false/" "$CONFIG_FILE"
+        SKIP_DEPENDENCY_CHECK="false"
+        notify "${SYM_SUCCESS} Đã bật kiểm tra phụ thuộc"
+        log "SETTINGS" "Bật kiểm tra phụ thuộc"
+    else
+        sed -i "s/^SKIP_DEPENDENCY_CHECK=.*/SKIP_DEPENDENCY_CHECK=true/" "$CONFIG_FILE"
+        SKIP_DEPENDENCY_CHECK="true"
+        notify "${SYM_SUCCESS} Đã tắt kiểm tra phụ thuộc"
+        log "SETTINGS" "Tắt kiểm tra phụ thuộc"
+    fi
+}
+
+# ============================ XÓA CACHE ============================
 clear_cache() {
     rm -rf "$CACHE_DIR"/*
-    notify "Đã xóa toàn bộ cache"
+    notify "${SYM_SUCCESS} Đã xóa toàn bộ cache"
+    log "SETTINGS" "Xóa toàn bộ cache"
+}
+
+# ============================ SAO LƯU CẤU HÌNH ============================
+backup_config() {
+    local backup_file="$BACKUP_DIR/config_backup_$(date +%Y%m%d_%H%M%S).cfg"
+    cp "$CONFIG_FILE" "$backup_file"
+    notify "${SYM_SUCCESS} Đã sao lưu cấu hình tại: $backup_file"
+    log "SETTINGS" "Sao lưu cấu hình tại: $backup_file"
+}
+
+# ============================ KHÔI PHỤC CẤU HÌNH ============================
+restore_config() {
+    local backup_files=($(ls -t "$BACKUP_DIR"/config_backup_*.cfg 2>/dev/null))
+    
+    if [[ ${#backup_files[@]} -eq 0 ]]; then
+        warn "${SYM_WARNING} Không có bản sao lưu nào được tìm thấy"
+        log "WARN" "Không tìm thấy bản sao lưu"
+        return
+    fi
+    
+    local selected=$(printf "%s\n" "${backup_files[@]}" | fzf --prompt="Chọn bản sao lưu: ")
+    log "USER" "Chọn bản sao lưu" "$selected"
+    
+    if [[ -z "$selected" ]]; then
+        warn "${SYM_WARNING} Không có bản sao lưu nào được chọn"
+        log "WARN" "Không chọn bản sao lưu"
+        return
+    fi
+    
+    cp "$selected" "$CONFIG_FILE"
+    source "$CONFIG_FILE"
+    notify "${SYM_SUCCESS} Đã khôi phục cấu hình từ: $selected"
+    log "SETTINGS" "Khôi phục cấu hình từ: $selected"
 }
 
 # ============================ XỬ LÝ CLI ARGUMENTS ============================
@@ -1396,19 +2161,53 @@ process_cli_arguments() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             -u|--update)
+                log "SYSTEM" "Cập nhật script từ CLI"
                 update_script
                 exit 0
                 ;;
             -v|--version)
+                log "SYSTEM" "Hiển thị phiên bản từ CLI"
                 echo "Anisub version $VERSION"
                 exit 0
                 ;;
             -h|--help)
+                log "SYSTEM" "Hiển thị trợ giúp từ CLI"
                 show_help
                 exit 0
                 ;;
+            --play)
+                if [[ -z "$2" ]]; then
+                    error "${SYM_ERROR} Thiếu tên anime cần phát"
+                    log "ERROR" "Thiếu tên anime từ CLI"
+                    exit 1
+                fi
+                DIRECT_PLAY="$2"
+                log "SYSTEM" "Phát trực tiếp từ CLI: $DIRECT_PLAY"
+                shift
+                ;;
+            --search)
+                if [[ -z "$2" ]]; then
+                    error "${SYM_ERROR} Thiếu từ khóa tìm kiếm"
+                    log "ERROR" "Thiếu từ khóa tìm kiếm từ CLI"
+                    exit 1
+                fi
+                DIRECT_SEARCH="$2"
+                log "SYSTEM" "Tìm kiếm trực tiếp từ CLI: $DIRECT_SEARCH"
+                shift
+                ;;
+            --download)
+                if [[ -z "$2" ]]; then
+                    error "${SYM_ERROR} Thiếu URL video cần tải"
+                    log "ERROR" "Thiếu URL tải từ CLI"
+                    exit 1
+                fi
+                DIRECT_DOWNLOAD="$2"
+                log "SYSTEM" "Tải trực tiếp từ CLI: $DIRECT_DOWNLOAD"
+                shift
+                ;;
             *)
-                warn "Argument không hợp lệ: $1"
+                error "${SYM_ERROR} Argument không hợp lệ: $1"
+                log "ERROR" "Argument không hợp lệ từ CLI: $1"
                 show_help
                 exit 1
                 ;;
@@ -1419,93 +2218,83 @@ process_cli_arguments() {
 
 # ============================ HIỂN THỊ TRỢ GIÚP ============================
 show_help() {
-    echo -e "${CYAN}Usage: ${NC}$0 [OPTION]"
-    echo -e "${CYAN}Options:${NC}"
-    echo -e "  -u, --update    Cập nhật script lên phiên bản mới nhất"
-    echo -e "  -v, --version   Hiển thị phiên bản hiện tại"
-    echo -e "  -h, --help      Hiển thị thông tin trợ giúp này"
-    echo -e "\n${YELLOW}Anisub - Công cụ xem anime từ terminal"
-    echo -e "Tác giả: ${AUTHORS[*]}${NC}"
-}
+    draw_box 80 "TRỢ GIÚP ANISUB" "$PRIMARY" "\
+${ACCENT}Usage:${NC} $0 [OPTION]
 
-# ============================ HÀM KHI KHỞI ĐỘNG ANISUB ============================
-main() {
-    init_dirs
-    check_dependencies
-    
-    # Xử lý CLI arguments nếu có
-    if [[ $# -gt 0 ]]; then
-        process_cli_arguments "$@"
-    fi
-    
-    # Hiển thị thông báo khởi động
-    clear
-    echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-    echo -e "${CYAN}│            ${MAGENTA}ANISUB v$VERSION${CYAN}               │${NC}"
-    echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-    echo -e "${CYAN}│  ${YELLOW}Đang khởi động...${CYAN}                            │${NC}"
-    echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
-    
-    log "SYSTEM" "Bắt đầu chương trình Anisub v$VERSION"
-    
-    # Kiểm tra kết nối Internet
-    if ! curl -Is https://google.com | grep -q "HTTP/2"; then
-        error "Không có kết nối Internet. Vui lòng kiểm tra kết nối của bạn."
-        exit 1
-    fi
-    
-    # Chạy menu chính
-    main_menu
+${ACCENT}Options:${NC}
+  -u, --update        Cập nhật script lên phiên bản mới nhất
+  -v, --version       Hiển thị phiên bản hiện tại
+  -h, --help          Hiển thị thông tin trợ giúp này
+  --play \"TÊN\"       Phát trực tiếp anime không qua menu
+  --search \"TỪ KHÓA\"  Tìm kiếm nhanh anime
+  --download \"URL\"    Tải video từ URL
+
+${ACCENT}Ví dụ:${NC}
+  $0 --play \"One Piece\"
+  $0 --search \"Attack on Titan\"
+  $0 --download \"https://ophim17.cc/phim/one-piece\"
+
+${ACCENT}Tác giả:${NC} ${AUTHORS[*]}
+${ACCENT}Donate:${NC} $DONATION_LINK"
+    exit 0
 }
-trap 'log "SYSTEM" "Chương trình bị dừng đột ngột"; exit 1' SIGINT SIGTERM
 
 # ============================ KIỂM TRA BẢN CẬP NHẬT ============================
 check_for_updates() {
-    notify "Đang kiểm tra bản cập nhật..."
+    log "SYSTEM" "Kiểm tra bản cập nhật"
+    notify "${SYM_UPDATE} Đang kiểm tra bản cập nhật..."
     
     # Thêm kiểm tra kết nối Internet trước
     if ! curl -Is https://github.com >/dev/null 2>&1; then
-        error "Không thể kết nối đến GitHub. Vui lòng kiểm tra kết nối Internet."
+        error "${SYM_ERROR} Không thể kết nối đến GitHub. Vui lòng kiểm tra kết nối Internet."
+        log "ERROR" "Không có kết nối Internet để kiểm tra cập nhật"
         return 1
     fi
 
     # Sử dụng URL raw chính xác 
     local latest_content=$(curl -s "https://raw.githubusercontent.com/kidtomboy/Remake-Anisub/main/anisub.sh")
     if [[ -z "$latest_content" ]]; then
-        error "Không thể tải nội dung từ GitHub"
+        error "${SYM_ERROR} Không thể tải nội dung từ GitHub"
+        log "ERROR" "Không thể tải nội dung từ GitHub"
         return 1
     fi
 
     local latest_version=$(echo "$latest_content" | grep -m1 "VERSION=" | cut -d'"' -f2)
     
     if [[ -z "$latest_version" ]]; then
-        error "Không thể xác định phiên bản mới nhất"
+        error "${SYM_ERROR} Không thể xác định phiên bản mới nhất"
+        log "ERROR" "Không thể xác định phiên bản mới nhất"
         return 1
     fi
 
     if [[ "$latest_version" != "$VERSION" ]]; then
-        warn "Đã có bản cập nhật mới!"
-        echo -e "${YELLOW}Bản hiện tại: $VERSION"
-        echo -e "Bản mới nhất: $latest_version${NC}"
-        echo -e "${CYAN}Thay đổi:"
-        echo "$latest_content" | grep -A5 "# PHIỂN BẢN CỦA ANISUB" | tail -n +3
-        echo -e "${NC}"
+        warn "${SYM_WARNING} Đã có bản cập nhật mới!"
+        log "UPDATE" "Phát hiện phiên bản mới: $latest_version (Hiện tại: $VERSION)"
+        draw_box 60 "CẬP NHẬT MỚI" "$WARNING" "\
+${ACCENT}Bản hiện tại:${NC} $VERSION
+${ACCENT}Bản mới nhất:${NC} $latest_version
+
+${TEXT}Bạn có muốn cập nhật không?${NC}"
         
-        read -p "Bạn có muốn cập nhật không? (Y/N): " -n 1 -r
+        read -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập lựa chọn (y/N): " -n 1 -r
         echo
+        log "USER" "Lựa chọn cập nhật" "$REPLY"
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             update_script
         else
-            notify "Bạn đã chọn không cập nhật. Có thể có lỗi tiềm ẩn khi sử dụng bản cũ."
+            notify "${SYM_INFO} Bạn đã chọn không cập nhật. Có thể có lỗi tiềm ẩn khi sử dụng bản cũ."
+            log "UPDATE" "Người dùng từ chối cập nhật"
         fi
     else
-        notify "Bạn đang sử dụng phiên bản mới nhất ($VERSION)"
+        notify "${SYM_SUCCESS} Bạn đang sử dụng phiên bản mới nhất ($VERSION)"
+        log "UPDATE" "Đang sử dụng phiên bản mới nhất: $VERSION"
     fi
 }
 
 # ============================ CẬP NHẬT SCRIPT ============================
 update_script() {
-    notify "Đang cập nhật script..."
+    log "SYSTEM" "Bắt đầu cập nhật script"
+    notify "${SYM_UPDATE} Đang cập nhật script..."
     local tmp_file="/tmp/anisub_update.sh"
     
     if curl -s "https://raw.githubusercontent.com/kidtomboy/Remake-Anisub/main/anisub.sh" -o "$tmp_file"; then
@@ -1513,35 +2302,128 @@ update_script() {
         if grep -q "ANISUB PRO MAX" "$tmp_file"; then
             chmod +x "$tmp_file"
             mv "$tmp_file" "$0"
-            notify "Cập nhật thành công! Vui lòng chạy lại script."
+            notify "${SYM_SUCCESS} Cập nhật thành công! Vui lòng chạy lại script."
+            log "UPDATE" "Cập nhật thành công"
             exit 0
         else
             rm -f "$tmp_file"
-            error "File tải về không hợp lệ"
+            error "${SYM_ERROR} File tải về không hợp lệ"
+            log "ERROR" "File cập nhật không hợp lệ"
             return 1
         fi
     else
-        error "Không thể tải bản cập nhật. Vui lòng thử lại sau."
+        error "${SYM_ERROR} Không thể tải bản cập nhật. Vui lòng thử lại sau."
+        log "ERROR" "Không thể tải bản cập nhật"
         return 1
     fi
 }
 
 # ============================ HIỂN THỊ THÔNG TIN TÁC GIẢ ============================
 show_authors() {
+    log "SYSTEM" "Hiển thị thông tin tác giả"
     clear
-    echo -e "${CYAN}┌──────────────────────────────────────────────┐${NC}"
-    echo -e "${CYAN}│             ${MAGENTA}THÔNG TIN TÁC GIẢ${CYAN}               │${NC}"
-    echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-    for author in "${AUTHORS[@]}"; do
-        echo -e "${CYAN}│  ${YELLOW}- $author${CYAN}" | awk '{printf "%-40s", $0}' | sed 's/$/│/'
-    done
-    echo -e "${CYAN}├──────────────────────────────────────────────┤${NC}"
-    echo -e "${CYAN}│  ${YELLOW}Donate: $DONATION_LINK${CYAN}" | awk '{printf "%-40s", $0}' | sed 's/$/│/'
-    echo -e "${CYAN}└──────────────────────────────────────────────┘${NC}"
-    read -n 1 -s -r -p "Nhấn bất kỳ phím nào để tiếp tục..."
+    draw_box 60 "THÔNG TIN TÁC GIẢ" "$PRIMARY" "\
+${ACCENT}Tác giả:${NC} ${AUTHORS[*]}
+
+${ACCENT}Donate:${NC} $DONATION_LINK
+
+${ACCENT}Github:${NC} https://github.com/kidtomboy
+
+${TEXT}Cảm ơn bạn đã sử dụng Anisub!${NC}"
+    
+    read -n 1 -s -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhấn bất kỳ phím nào để tiếp tục..."
 }
 
-# ============================ CHẠY CHƯƠNG TRÌNH ============================
-main"$@"
+# ============================ HÀM CHÍNH ============================
+main() {
+    init_dirs
+    init_ui
+    check_dependencies "$1"
+    
+    # Xử lý CLI arguments nếu có
+    if [[ $# -gt 0 ]]; then
+        process_cli_arguments "$@"
+    fi
+    
+    # Xử lý các lệnh trực tiếp
+    if [[ -n "$DIRECT_PLAY" ]]; then
+        log "SYSTEM" "Phát trực tiếp: $DIRECT_PLAY"
+        
+        # Thử tìm trên AniData trước
+        local anime_list=$(get_anime_list_anidata)
+        if echo "$anime_list" | grep -q "^$DIRECT_PLAY$"; then
+            play_anime_anidata "$DIRECT_PLAY"
+            exit 0
+        fi
+        
+        # Nếu không có trên AniData, thử tìm trên OPhim17
+        local anime_name_encoded=$(echo "$DIRECT_PLAY" | sed 's/ /+/g')
+        local anime_list=$(search_anime_ophim17 "$anime_name_encoded")
+        
+        if [[ -n "$anime_list" ]]; then
+            local selected_anime=$(echo "$anime_list" | head -n 1)
+            local anime_url=$(echo "$selected_anime" | sed 's/.*(\(.*\))/\1/')
+            local anime_name=$(echo "$selected_anime" | sed 's/^[^(]*(\([^)]*\)) \+//;s/ ([^ ]*)$//')
+            play_anime_ophim17 "$anime_url" "$anime_name"
+            exit 0
+        else
+            error "${SYM_ERROR} Không tìm thấy anime '$DIRECT_PLAY'"
+            log "ERROR" "Không tìm thấy anime để phát trực tiếp: $DIRECT_PLAY"
+            exit 1
+        fi
+    fi
+    
+    if [[ -n "$DIRECT_SEARCH" ]]; then
+        log "SYSTEM" "Tìm kiếm trực tiếp: $DIRECT_SEARCH"
+        search_ophim17 "$DIRECT_SEARCH"
+        exit 0
+    fi
+    
+    if [[ -n "$DIRECT_DOWNLOAD" ]]; then
+        log "SYSTEM" "Tải trực tiếp: $DIRECT_DOWNLOAD"
+        
+        if [[ "$DIRECT_DOWNLOAD" == *"ophim17.cc"* ]]; then
+            local anime_name=$(curl -s "$DIRECT_DOWNLOAD" | pup 'h1 text{}' | tr -d '\n')
+            local episode_list=$(get_episode_list_ophim17 "$DIRECT_DOWNLOAD")
+            local first_episode=$(echo "$episode_list" | head -n 1)
+            local episode_url=$(echo "$first_episode" | cut -d'|' -f2)
+            
+            download_video "$episode_url" "$anime_name - Tập 1" "$DOWNLOAD_DIR/$anime_name" "$anime_name"
+            exit $?
+        else
+            download_video "$DIRECT_DOWNLOAD" "Video_$(date +%s)" "$DOWNLOAD_DIR" "Direct_Download"
+            exit $?
+        fi
+    fi
+    
+    # Hiển thị thông báo khởi động
+    show_header
+    
+    local content="\
+${SYM_SUCCESS} Đang khởi động Anisub Pro Max...
+${SYM_SUCCESS} Hệ điều hành: $OS ($OS_DISTRO)
+${SYM_SUCCESS} Thư mục cấu hình: $CONFIG_DIR
+${SYM_SUCCESS} Thư mục tải xuống: $DOWNLOAD_DIR"
+    
+    draw_box 60 "THÔNG TIN HỆ THỐNG" "$INFO" "$content"
+    sleep 2
+    
+    # Kiểm tra kết nối Internet
+    if ! curl -Is https://google.com | grep -q "HTTP/2"; then
+        error "${SYM_ERROR} Không có kết nối Internet. Vui lòng kiểm tra kết nối của bạn."
+        log "ERROR" "Không có kết nối Internet"
+        exit 1
+    fi
+    
+    # Chạy menu chính
+    main_menu
+}
 
-# END~ | Remake by Cherry Cute :33
+# Bắt lỗi và thoát
+trap 'log "SYSTEM" "Chương trình bị dừng đột ngột"; exit 1' SIGINT SIGTERM
+
+# Chạy chương trình
+main "$@"
+
+# Kết thúc
+exit 0
