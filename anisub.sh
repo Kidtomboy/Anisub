@@ -9,7 +9,7 @@
 # Ngày cập nhật: 04-04-2025
 #
 # Tính năng chính:
-# - Phát anime từ nhiều nguồn (Ophim17, AniData, YouTube)
+# - Phát anime từ nhiều nguồn (Ophim17, Kkphim, AniData, YouTube)
 # - Tải xuống tập phim với nhiều tùy chọn
 # - Công cụ video mạnh mẽ (cắt/ghép/xem trước)
 # - Lịch sử xem chi tiết
@@ -701,7 +701,7 @@ get_episode_title() {
 get_anime_list_anidata() {
     log "SEARCH" "Lấy danh sách anime từ AniData"
     local cache_file="$CACHE_DIR/anidata_list.cache"
-    local csv_url="https://raw.githubusercontent.com/yushichivnllc/sxhas/refs/heads/main/anime.csv"
+    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
@@ -728,7 +728,7 @@ get_episode_list_anidata() {
     log "STREAM" "Lấy danh sách tập từ AniData cho: $anime_name"
     
     local cache_file="$CACHE_DIR/anidata_episodes_$(echo "$anime_name" | md5sum | cut -d' ' -f1).cache"
-    local csv_url="https://raw.githubusercontent.com/yushichivnllc/sxhas/refs/heads/main/anime.csv"
+    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
@@ -788,7 +788,7 @@ configure_logging() {
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn cấu hình log" "$choice"
         
         case $choice in
@@ -1006,7 +1006,7 @@ download_video() {
             
             show_menu "${options[@]}"
             
-            read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+            read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
             log "USER" "Lựa chọn sau khi tải" "$choice"
             
             case $choice in
@@ -1316,7 +1316,7 @@ play_from_youtube() {
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn khi xem YouTube" "$choice"
         
         case $choice in
@@ -1375,7 +1375,7 @@ main_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn menu chính" "$choice"
         
         case $choice in
@@ -1427,26 +1427,28 @@ search_and_play_menu() {
         
         local options=(
             "${SYM_SEARCH} 1. Tìm kiếm từ OPhim17" "Tìm kiếm anime từ nguồn OPhim17"
-            "${SYM_SEARCH} 2. Tìm kiếm từ AniData" "Tìm kiếm anime từ nguồn AniData"
-            "${SYM_SEARCH} 3. Tìm kiếm từ YouTube" "Tìm kiếm anime/AMV từ YouTube"
-            "${SYM_PLAY} 4. Nhập URL trực tiếp" "Phát trực tiếp từ URL (OPhim17/AniData/YouTube)"
+            "${SYM_SEARCH} 2. Tìm kiếm từ KKPhim" "Tìm kiếm anime từ nguồn KKPhim"
+            "${SYM_SEARCH} 3. Tìm kiếm từ AniData" "Tìm kiếm anime từ nguồn AniData"
+            "${SYM_SEARCH} 4. Tìm kiếm từ YouTube" "Tìm kiếm anime/AMV từ YouTube"
+            "${SYM_PLAY} 5. Nhập URL trực tiếp" "Phát trực tiếp từ URL (OPhim17/AniData/YouTube/KKPhim)"
             "${SYM_EXIT} 0. Quay lại" "Quay lại menu chính"
         )
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn menu tìm kiếm" "$choice"
         
         case $choice in
             1) search_ophim17 ;;
-            2) search_anidata ;;
-            3) 
-                read -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhập từ khóa tìm kiếm trên YouTube: ${NC} ")" query
+            2) search_anime_kkphim ;;
+            3) search_anidata ;;
+            4) 
+                read -p "Nhập từ khóa tìm kiếm trên YouTube: " query
                 log "USER" "Tìm kiếm YouTube" "$query"
                 play_from_youtube "$query" 
                 ;;
-            4) play_from_url ;;
+            5) play_from_url ;;
             0) 
                 log "NAVIGATE" "Quay lại menu chính"
                 return 
@@ -1461,7 +1463,7 @@ search_and_play_menu() {
 
 # ============================ TÌM KIẾM TỪ OPHIM17 ============================
 search_ophim17() {
-    read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhập từ khóa tìm kiếm: ${NC} ")" keyword
+    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập từ khóa tìm kiếm: " keyword
     log "USER" "Tìm kiếm OPhim17" "$keyword"
     
     if [[ -z "$keyword" ]]; then
@@ -1536,7 +1538,7 @@ play_anime_ophim17() {
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn khi xem phim" "$choice"
         
         case $choice in
@@ -1613,6 +1615,144 @@ play_anime_ophim17() {
     done
 }
 
+# ============================ HÀM LẤY DANH SÁCH ANIME/PHIM TỪ KKPHIM ============================
+search_anime_kkphim() {
+    local keyword="$1"
+    log "SEARCH" "Tìm kiếm trên KKPhim với từ khóa: $keyword"
+    
+    # Kiểm tra độ dài từ khóa
+    if [[ ${#keyword} -lt 3 ]]; then
+        error "Từ khóa tìm kiếm phải có ít nhất 3 ký tự"
+        log "ERROR" "Từ khóa quá ngắn: $keyword"
+        return 1
+    fi
+
+    local cache_file="$CACHE_DIR/kkphim_search_${keyword}.cache"
+    
+    # Kiểm tra cache
+    if [[ -f "$cache_file" ]]; then
+        local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file")))
+        if [[ $cache_age -lt $MAX_CACHE_AGE ]]; then
+            log "CACHE" "Sử dụng kết quả từ cache cho: $keyword"
+            cat "$cache_file"
+            return
+        fi
+    fi
+    
+    notify "${SYM_SEARCH} Đang tìm kiếm: $keyword..."
+    local search_url="https://kkphim.com/tim-kiem?keyword=${keyword}"
+    local anime_list
+    
+    # Sử dụng timeout cho curl để tránh treo lâu
+    if ! anime_list=$(timeout 20 curl -s "$search_url" | pup '.list-films > .film-item > a attr{href}' 2>/dev/null); then
+        error "Không thể tải dữ liệu tìm kiếm"
+        log "ERROR" "Không thể tải dữ liệu tìm kiếm từ KKPhim"
+        return 1
+    fi
+    
+    # Xử lý kết quả tìm kiếm
+    if [[ -z "$anime_list" ]]; then
+        warn "Không tìm thấy anime nào với từ khóa '$keyword'"
+        log "SEARCH" "Không tìm thấy kết quả cho: $keyword"
+        return 1
+    fi
+
+    # Tạo danh sách anime với thông tin đầy đủ
+    local processed_list=$(echo "$anime_list" | awk '{print "https://kkphim.com" $0}' | \
+        while IFS= read -r link; do
+            local title=$(timeout 20 curl -s "$link" | pup 'h1.title-episode text{}' | tr -d '\n' 2>/dev/null)
+            if [[ -z "$title" ]]; then
+                title="Không có tiêu đề"
+                log "WARN" "Không lấy được tiêu đề cho URL: $link"
+            fi
+            printf '%s\n' "$link@@@$title"
+        done | \
+        awk -F '@@@' '{print NR ". " $2 " (" $1 ")"}' 2>/dev/null)
+    
+    # Kiểm tra kết quả xử lý
+    if [[ -z "$processed_list" ]]; then
+        error "Không thể xử lý kết quả tìm kiếm"
+        log "ERROR" "Không thể xử lý kết quả tìm kiếm từ KKPhim"
+        return 1
+    fi
+    
+    # Lưu vào cache
+    echo "$processed_list" > "$cache_file"
+    log "CACHE" "Lưu kết quả tìm kiếm vào cache: $cache_file"
+    echo "$processed_list"
+}
+
+# ============================ HÀM LẤY DANH SÁCH TẬP TỪ KKPHIM ============================
+get_episode_list_kkphim() {
+    local url="$1"
+    log "STREAM" "Lấy danh sách tập từ URL: $url"
+    
+    local cache_file="$CACHE_DIR/kkphim_episodes_$(echo "$url" | md5sum | cut -d' ' -f1).cache"
+    
+    # Kiểm tra cache
+    if [[ -f "$cache_file" ]]; then
+        local cache_age=$(($(date +%s) - $(stat -c %Y "$cache_file")))
+        if [[ $cache_age -lt $MAX_CACHE_AGE ]]; then
+            log "CACHE" "Sử dụng danh sách tập từ cache"
+            cat "$cache_file"
+            return
+        fi
+    fi
+    
+    local html_content=$(curl -s "$url")
+    if [[ -z "$html_content" ]]; then
+        error "Không thể tải nội dung từ URL: $url"
+        log "ERROR" "Không thể tải nội dung từ URL: $url"
+        return 1
+    fi
+    
+    local episode_data=$(echo "$html_content" | pup 'script json{}' | \
+        jq -r '.[].text | @text' | \
+        grep -oE '"(http|https)://[^"]*index.m3u8"' | \
+        sed 's/"//g')
+    
+    if [[ -z "$episode_data" ]]; then
+        error "Không tìm thấy danh sách tập phim cho URL: $url"
+        log "ERROR" "Không tìm thấy danh sách tập phim cho URL: $url"
+        return 1
+    fi
+    
+    local i=1
+    while IFS= read -r link; do
+        printf "%s|%s\n" "$i" "$link"
+        i=$((i + 1))
+    done <<< "$episode_data" > "$cache_file"
+    
+    log "CACHE" "Lưu danh sách tập vào cache: $cache_file"
+    cat "$cache_file"
+}
+
+# ============================ LẤY TIÊU ĐỀ TẬP PHIM ============================
+get_episode_title() {
+    local episode_url="$1"
+    local episode_number="$2"
+    log "STREAM" "Lấy tiêu đề tập phim #$episode_number từ URL: $episode_url"
+    
+    local cache_file="$CACHE_DIR/kkphim_title_$(echo "$episode_url" | md5sum | cut -d' ' -f1)_$episode_number.cache"
+    
+    # Kiểm tra cache
+    if [[ -f "$cache_file" ]]; then
+        cat "$cache_file"
+        return
+    fi
+    
+    local episode_title=$(curl -s "$episode_url" | pup ".ep-name text{}" | sed -n "${episode_number}p")
+    
+    if [[ -z "$episode_title" ]]; then
+        episode_title="Episode $episode_number"
+        log "WARN" "Không lấy được tiêu đề tập phim, sử dụng mặc định"
+    fi
+    
+    echo "$episode_title" > "$cache_file"
+    log "CACHE" "Lưu tiêu đề tập phim vào cache: $cache_file"
+    echo "$episode_title"
+}
+
 # ============================ TÌM KIẾM TỪ ANIDATA (@NiyakiPham QUẢN LÝ) ============================
 search_anidata() {
     log "SEARCH" "Tìm kiếm từ AniData"
@@ -1674,7 +1814,7 @@ play_anime_anidata() {
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn khi xem phim từ AniData" "$choice"
         
         case $choice in
@@ -1704,7 +1844,7 @@ play_anime_anidata() {
 
 # ============================ PHÁT VIDEO TỪ URL TRỰC TIẾP ============================
 play_from_url() {
-    read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhập URL anime (OPhim17, AniData hoặc YouTube): ${NC} ")" url
+    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập URL anime (OPhim17, AniData hoặc YouTube): " url
     log "USER" "Nhập URL trực tiếp" "$url"
     
     if [[ -z "$url" ]]; then
@@ -1732,7 +1872,7 @@ play_from_url() {
             
             show_menu "${options[@]}"
             
-            read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+            read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
             log "USER" "Lựa chọn khi xem YouTube từ URL" "$choice"
             
             case $choice in
@@ -1758,7 +1898,7 @@ play_from_url() {
                     ;;
             esac
         done
-    elif [[ "$url" == *"raw.githubusercontent.com/yushichivnllc/sxhas"* ]]; then
+    elif [[ "$url" == *"raw.githubusercontent.com/toilamsao/anidata"* ]]; then
         warn "${SYM_WARNING} Vui lòng sử dụng tùy chọn tìm kiếm AniData thay vì nhập URL trực tiếp"
         log "WARN" "Nhập URL AniData trực tiếp"
     else
@@ -1791,7 +1931,7 @@ history_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn menu lịch sử" "$choice"
         
         case $choice in
@@ -1843,7 +1983,7 @@ favorites_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn menu yêu thích" "$choice"
         
         case $choice in
@@ -1932,7 +2072,7 @@ video_tools_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn menu công cụ video" "$choice"
         
         case $choice in
@@ -1963,7 +2103,7 @@ cut_video_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn menu cắt video" "$choice"
         
         case $choice in
@@ -2043,7 +2183,7 @@ settings_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
         log "USER" "Lựa chọn menu cài đặt" "$choice"
         
         case $choice in
@@ -2073,7 +2213,7 @@ settings_menu() {
 
 # ============================ THAY ĐỔI THƯ MỤC TẢI XUỐNG ============================
 change_download_dir() {
-    read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhập đường dẫn thư mục tải xuống mới: ${NC} ")" new_dir
+    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập đường dẫn thư mục tải xuống mới: " new_dir
     log "USER" "Nhập thư mục tải xuống mới" "$new_dir"
     
     if [[ -z "$new_dir" ]]; then
@@ -2355,7 +2495,7 @@ ${ACCENT}Bản mới nhất:${NC} $latest_version
 
 ${TEXT}Bạn có muốn cập nhật không?${NC}"
         
-        read -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhập lựa chọn (y/N): ${NC} ")" -n 1 -r
+        read -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập lựa chọn (y/N): " -n 1 -r
         echo
         log "USER" "Lựa chọn cập nhật" "$REPLY"
         if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -2410,7 +2550,7 @@ ${ACCENT}Github:${NC} https://github.com/kidtomboy
 
 ${TEXT}Cảm ơn bạn đã sử dụng Anisub!${NC}"
     
-    read -n 1 -s -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhấn bất kỳ phím nào để tiếp tục...${NC} ")"
+    read -n 1 -s -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhấn bất kỳ phím nào để tiếp tục..."
 }
 
 # ============================ HÀM CHÍNH ============================
