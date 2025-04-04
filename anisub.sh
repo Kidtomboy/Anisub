@@ -701,7 +701,7 @@ get_episode_title() {
 get_anime_list_anidata() {
     log "SEARCH" "Lấy danh sách anime từ AniData"
     local cache_file="$CACHE_DIR/anidata_list.cache"
-    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"
+    local csv_url="https://raw.githubusercontent.com/yushichivnllc/sxhas/refs/heads/main/anime.csv"
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
@@ -728,7 +728,7 @@ get_episode_list_anidata() {
     log "STREAM" "Lấy danh sách tập từ AniData cho: $anime_name"
     
     local cache_file="$CACHE_DIR/anidata_episodes_$(echo "$anime_name" | md5sum | cut -d' ' -f1).cache"
-    local csv_url="https://raw.githubusercontent.com/toilamsao/anidata/refs/heads/main/data.csv"
+    local csv_url="https://raw.githubusercontent.com/yushichivnllc/sxhas/refs/heads/main/anime.csv"
     
     # Kiểm tra cache
     if [[ -f "$cache_file" ]]; then
@@ -788,7 +788,7 @@ configure_logging() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn cấu hình log" "$choice"
         
         case $choice in
@@ -1006,7 +1006,7 @@ download_video() {
             
             show_menu "${options[@]}"
             
-            read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+            read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
             log "USER" "Lựa chọn sau khi tải" "$choice"
             
             case $choice in
@@ -1316,7 +1316,7 @@ play_from_youtube() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn khi xem YouTube" "$choice"
         
         case $choice in
@@ -1375,7 +1375,7 @@ main_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn menu chính" "$choice"
         
         case $choice in
@@ -1435,14 +1435,14 @@ search_and_play_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn menu tìm kiếm" "$choice"
         
         case $choice in
             1) search_ophim17 ;;
             2) search_anidata ;;
             3) 
-                read -p "Nhập từ khóa tìm kiếm trên YouTube: " query
+                read -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhập từ khóa tìm kiếm trên YouTube: ${NC} ")" query
                 log "USER" "Tìm kiếm YouTube" "$query"
                 play_from_youtube "$query" 
                 ;;
@@ -1461,7 +1461,7 @@ search_and_play_menu() {
 
 # ============================ TÌM KIẾM TỪ OPHIM17 ============================
 search_ophim17() {
-    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập từ khóa tìm kiếm: " keyword
+    read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhập từ khóa tìm kiếm: ${NC} ")" keyword
     log "USER" "Tìm kiếm OPhim17" "$keyword"
     
     if [[ -z "$keyword" ]]; then
@@ -1536,7 +1536,7 @@ play_anime_ophim17() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn khi xem phim" "$choice"
         
         case $choice in
@@ -1674,7 +1674,7 @@ play_anime_anidata() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn khi xem phim từ AniData" "$choice"
         
         case $choice in
@@ -1704,7 +1704,7 @@ play_anime_anidata() {
 
 # ============================ PHÁT VIDEO TỪ URL TRỰC TIẾP ============================
 play_from_url() {
-    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập URL anime (OPhim17, AniData hoặc YouTube): " url
+    read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhập URL anime (OPhim17, AniData hoặc YouTube): ${NC} ")" url
     log "USER" "Nhập URL trực tiếp" "$url"
     
     if [[ -z "$url" ]]; then
@@ -1732,7 +1732,7 @@ play_from_url() {
             
             show_menu "${options[@]}"
             
-            read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+            read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
             log "USER" "Lựa chọn khi xem YouTube từ URL" "$choice"
             
             case $choice in
@@ -1758,7 +1758,7 @@ play_from_url() {
                     ;;
             esac
         done
-    elif [[ "$url" == *"raw.githubusercontent.com/toilamsao/anidata"* ]]; then
+    elif [[ "$url" == *"raw.githubusercontent.com/yushichivnllc/sxhas"* ]]; then
         warn "${SYM_WARNING} Vui lòng sử dụng tùy chọn tìm kiếm AniData thay vì nhập URL trực tiếp"
         log "WARN" "Nhập URL AniData trực tiếp"
     else
@@ -1791,7 +1791,7 @@ history_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn menu lịch sử" "$choice"
         
         case $choice in
@@ -1843,7 +1843,7 @@ favorites_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn menu yêu thích" "$choice"
         
         case $choice in
@@ -1932,7 +1932,7 @@ video_tools_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn menu công cụ video" "$choice"
         
         case $choice in
@@ -1963,7 +1963,7 @@ cut_video_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn menu cắt video" "$choice"
         
         case $choice in
@@ -2043,7 +2043,7 @@ settings_menu() {
         
         show_menu "${options[@]}"
         
-        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Chọn một tùy chọn: ${NC} ")" choice
         log "USER" "Lựa chọn menu cài đặt" "$choice"
         
         case $choice in
@@ -2073,7 +2073,7 @@ settings_menu() {
 
 # ============================ THAY ĐỔI THƯ MỤC TẢI XUỐNG ============================
 change_download_dir() {
-    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập đường dẫn thư mục tải xuống mới: " new_dir
+    read -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhập đường dẫn thư mục tải xuống mới: ${NC} ")" new_dir
     log "USER" "Nhập thư mục tải xuống mới" "$new_dir"
     
     if [[ -z "$new_dir" ]]; then
@@ -2355,7 +2355,7 @@ ${ACCENT}Bản mới nhất:${NC} $latest_version
 
 ${TEXT}Bạn có muốn cập nhật không?${NC}"
         
-        read -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập lựa chọn (y/N): " -n 1 -r
+        read -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhập lựa chọn (y/N): ${NC} ")" -n 1 -r
         echo
         log "USER" "Lựa chọn cập nhật" "$REPLY"
         if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -2410,7 +2410,7 @@ ${ACCENT}Github:${NC} https://github.com/kidtomboy
 
 ${TEXT}Cảm ơn bạn đã sử dụng Anisub!${NC}"
     
-    read -n 1 -s -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhấn bất kỳ phím nào để tiếp tục..."
+    read -n 1 -s -r -p "$(echo -e "${PRIMARY}${SYM_PROMPT} Nhấn bất kỳ phím nào để tiếp tục...${NC} ")"
 }
 
 # ============================ HÀM CHÍNH ============================
