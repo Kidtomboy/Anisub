@@ -9,7 +9,7 @@
 # Ngày cập nhật: 04-04-2025
 #
 # Tính năng chính:
-# - Phát anime từ nhiều nguồn (Ophim17, Kkphim, AniData, YouTube)
+# - Phát anime từ nhiều nguồn (Ophim17, AniData, YouTube)
 # - Tải xuống tập phim với nhiều tùy chọn
 # - Công cụ video mạnh mẽ (cắt/ghép/xem trước)
 # - Lịch sử xem chi tiết
@@ -1430,7 +1430,7 @@ search_and_play_menu() {
             "${SYM_SEARCH} 2. Tìm kiếm từ KKPhim" "Tìm kiếm anime từ nguồn KKPhim"
             "${SYM_SEARCH} 3. Tìm kiếm từ AniData" "Tìm kiếm anime từ nguồn AniData"
             "${SYM_SEARCH} 4. Tìm kiếm từ YouTube" "Tìm kiếm anime/AMV từ YouTube"
-            "${SYM_PLAY} 5. Nhập URL trực tiếp" "Phát trực tiếp từ URL (OPhim17/AniData/YouTube/KKPhim)"
+            "${SYM_PLAY} 5. Nhập URL trực tiếp" "Phát trực tiếp từ URL (OPhim17/KKPhim/AniData/YouTube)"
             "${SYM_EXIT} 0. Quay lại" "Quay lại menu chính"
         )
         
@@ -1441,7 +1441,7 @@ search_and_play_menu() {
         
         case $choice in
             1) search_ophim17 ;;
-            2) search_anime_kkphim ;;
+            2) search_kkphim ;;
             3) search_anidata ;;
             4) 
                 read -p "Nhập từ khóa tìm kiếm trên YouTube: " query
@@ -1459,6 +1459,40 @@ search_and_play_menu() {
                 ;;
         esac
     done
+}
+
+# Thêm hàm search_kkphim
+search_kkphim() {
+    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập từ khóa tìm kiếm: " keyword
+    log "USER" "Tìm kiếm KKPhim" "$keyword"
+    
+    if [[ -z "$keyword" ]]; then
+        warn "${SYM_WARNING} Từ khóa không được để trống"
+        log "WARN" "Từ khóa tìm kiếm trống"
+        return
+    fi
+    
+    local anime_list=$(search_anime_kkphim "$keyword")
+    
+    if [[ -z "$anime_list" ]]; then
+        warn "${SYM_WARNING} Không tìm thấy anime nào với từ khóa '$keyword'"
+        log "SEARCH" "Không tìm thấy kết quả cho: $keyword"
+        return
+    fi
+    
+    local selected_anime=$(echo "$anime_list" | fzf --prompt="Chọn anime: " --preview "echo {} | sed 's/.*(//;s/)//' | xargs -I{} curl -s {} | pup 'p.description text{}'")
+    log "USER" "Chọn anime" "$selected_anime"
+    
+    if [[ -z "$selected_anime" ]]; then
+        warn "${SYM_WARNING} Không có anime nào được chọn"
+        log "WARN" "Không chọn anime"
+        return
+    fi
+    
+    local anime_url=$(echo "$selected_anime" | sed 's/.*(\(.*\))/\1/')
+    local anime_name=$(echo "$selected_anime" | sed 's/^[^(]*(\([^)]*\)) \+//;s/ ([^ ]*)$//')
+    
+    play_anime_kkphim "$anime_url" "$anime_name"
 }
 
 # ============================ TÌM KIẾM TỪ OPHIM17 ============================
@@ -1620,7 +1654,6 @@ search_anime_kkphim() {
     local keyword="$1"
     log "SEARCH" "Tìm kiếm trên KKPhim với từ khóa: $keyword"
     
-    # Kiểm tra độ dài từ khóa
     if [[ ${#keyword} -lt 3 ]]; then
         error "Từ khóa tìm kiếm phải có ít nhất 3 ký tự"
         log "ERROR" "Từ khóa quá ngắn: $keyword"
@@ -1643,24 +1676,22 @@ search_anime_kkphim() {
     local search_url="https://kkphim.com/tim-kiem?keyword=${keyword}"
     local anime_list
     
-    # Sử dụng timeout cho curl để tránh treo lâu
-    if ! anime_list=$(timeout 20 curl -s "$search_url" | pup '.list-films > .film-item > a attr{href}' 2>/dev/null); then
+    if ! anime_list=$(timeout 20 curl -s "$search_url" | pup '.ml-4 > a attr{href}' 2>/dev/null); then
         error "Không thể tải dữ liệu tìm kiếm"
         log "ERROR" "Không thể tải dữ liệu tìm kiếm từ KKPhim"
         return 1
     fi
     
-    # Xử lý kết quả tìm kiếm
     if [[ -z "$anime_list" ]]; then
         warn "Không tìm thấy anime nào với từ khóa '$keyword'"
         log "SEARCH" "Không tìm thấy kết quả cho: $keyword"
         return 1
     fi
 
-    # Tạo danh sách anime với thông tin đầy đủ
+    # Xử lý kết quả tìm kiếm
     local processed_list=$(echo "$anime_list" | awk '{print "https://kkphim.com" $0}' | \
         while IFS= read -r link; do
-            local title=$(timeout 20 curl -s "$link" | pup 'h1.title-episode text{}' | tr -d '\n' 2>/dev/null)
+            local title=$(timeout 20 curl -s "$link" | pup 'h1 text{}' | tr -d '\n' 2>/dev/null)
             if [[ -z "$title" ]]; then
                 title="Không có tiêu đề"
                 log "WARN" "Không lấy được tiêu đề cho URL: $link"
@@ -1669,7 +1700,6 @@ search_anime_kkphim() {
         done | \
         awk -F '@@@' '{print NR ". " $2 " (" $1 ")"}' 2>/dev/null)
     
-    # Kiểm tra kết quả xử lý
     if [[ -z "$processed_list" ]]; then
         error "Không thể xử lý kết quả tìm kiếm"
         log "ERROR" "Không thể xử lý kết quả tìm kiếm từ KKPhim"
@@ -1727,30 +1757,123 @@ get_episode_list_kkphim() {
     cat "$cache_file"
 }
 
-# ============================ LẤY TIÊU ĐỀ TẬP PHIM ============================
-get_episode_title() {
-    local episode_url="$1"
-    local episode_number="$2"
-    log "STREAM" "Lấy tiêu đề tập phim #$episode_number từ URL: $episode_url"
+# ============================ PHÁT ANIME TỪ KKPHIM ============================
+play_anime_kkphim() {
+    local anime_url="$1"
+    local anime_name="$2"
+    log "STREAM" "Phát anime từ KKPhim: $anime_name (URL: $anime_url)"
     
-    local cache_file="$CACHE_DIR/kkphim_title_$(echo "$episode_url" | md5sum | cut -d' ' -f1)_$episode_number.cache"
-    
-    # Kiểm tra cache
-    if [[ -f "$cache_file" ]]; then
-        cat "$cache_file"
+    local episode_list=$(get_episode_list_kkphim "$anime_url")
+    if [[ -z "$episode_list" ]]; then
+        error "${SYM_ERROR} Không thể lấy danh sách tập phim"
+        log "ERROR" "Không lấy được danh sách tập phim"
         return
     fi
     
-    local episode_title=$(curl -s "$episode_url" | pup ".ep-name text{}" | sed -n "${episode_number}p")
+    local selected_episode=$(echo "$episode_list" | fzf --prompt="Chọn tập phim: ")
+    log "USER" "Chọn tập phim" "$selected_episode"
     
-    if [[ -z "$episode_title" ]]; then
-        episode_title="Episode $episode_number"
-        log "WARN" "Không lấy được tiêu đề tập phim, sử dụng mặc định"
+    if [[ -z "$selected_episode" ]]; then
+        warn "${SYM_WARNING} Không có tập nào được chọn"
+        log "WARN" "Không chọn tập phim"
+        return
     fi
     
-    echo "$episode_title" > "$cache_file"
-    log "CACHE" "Lưu tiêu đề tập phim vào cache: $cache_file"
-    echo "$episode_title"
+    local episode_number=$(echo "$selected_episode" | cut -d'|' -f1)
+    local episode_url=$(echo "$selected_episode" | cut -d'|' -f2)
+    local episode_title="Tập $episode_number"
+    
+    add_to_history "$anime_name" "$episode_title"
+    
+    while true; do
+        show_header
+        
+        local options=(
+            "${SYM_PLAY} 1. Phát tập này" "Phát tập hiện tại"
+            "${SYM_NEXT} 2. Phát tập tiếp theo" "Chuyển đến tập tiếp theo"
+            "${SYM_PREV} 3. Phát tập trước đó" "Quay lại tập trước đó"
+            "${SYM_SELECT} 4. Chọn tập khác" "Chọn tập phim khác"
+            "${SYM_DOWNLOAD} 5. Tải tập này xuống" "Tải tập phim về thiết bị"
+            "${SYM_FAV} 6. Thêm vào yêu thích" "Thêm anime vào danh sách yêu thích"
+            "${SYM_EXIT} 0. Quay lại" "Quay lại menu tìm kiếm"
+        )
+        
+        show_menu "${options[@]}"
+        
+        read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Chọn một tùy chọn: " choice
+        log "USER" "Lựa chọn khi xem phim" "$choice"
+        
+        case $choice in
+            1)
+                play_video "$episode_url" "$anime_name - Tập $episode_number"
+                ;;
+            2)
+                next_episode_number=$((episode_number + 1))
+                local next_episode=$(echo "$episode_list" | grep "^$next_episode_number|")
+                
+                if [[ -z "$next_episode" ]]; then
+                    warn "${SYM_WARNING} Không có tập tiếp theo"
+                    log "WARN" "Không có tập tiếp theo"
+                    continue
+                fi
+                
+                episode_number=$next_episode_number
+                episode_url=$(echo "$next_episode" | cut -d'|' -f2)
+                episode_title="Tập $episode_number"
+                add_to_history "$anime_name" "$episode_title"
+                play_video "$episode_url" "$anime_name - Tập $episode_number"
+                ;;
+            3)
+                previous_episode_number=$((episode_number - 1))
+                local previous_episode=$(echo "$episode_list" | grep "^$previous_episode_number|")
+                
+                if [[ -z "$previous_episode" || $previous_episode_number -lt 1 ]]; then
+                    warn "${SYM_WARNING} Không có tập trước đó"
+                    log "WARN" "Không có tập trước đó"
+                    continue
+                fi
+                
+                episode_number=$previous_episode_number
+                episode_url=$(echo "$previous_episode" | cut -d'|' -f2)
+                episode_title="Tập $episode_number"
+                add_to_history "$anime_name" "$episode_title"
+                play_video "$episode_url" "$anime_name - Tập $episode_number"
+                ;;
+            4)
+                selected_episode=$(echo "$episode_list" | fzf --prompt="Chọn tập phim: ")
+                log "USER" "Chọn tập phim khác" "$selected_episode"
+                
+                if [[ -z "$selected_episode" ]]; then
+                    warn "${SYM_WARNING} Không có tập nào được chọn"
+                    log "WARN" "Không chọn tập phim"
+                    continue
+                fi
+                
+                episode_number=$(echo "$selected_episode" | cut -d'|' -f1)
+                episode_url=$(echo "$selected_episode" | cut -d'|' -f2)
+                episode_title="Tập $episode_number"
+                add_to_history "$anime_name" "$episode_title"
+                play_video "$episode_url" "$anime_name - Tập $episode_number"
+                ;;
+            5)
+                download_video "$episode_url" "$anime_name - Tập $episode_number" "$DOWNLOAD_DIR/$anime_name" "$anime_name"
+                if [[ $? -eq 2 ]]; then
+                    play_video "$episode_url" "$anime_name - Tập $episode_number"
+                fi
+                ;;
+            6)
+                add_to_favorites "$anime_name"
+                ;;
+            0)
+                log "NAVIGATE" "Quay lại menu tìm kiếm"
+                return
+                ;;
+            *)
+                warn "${SYM_WARNING} Lựa chọn không hợp lệ, vui lòng chọn lại"
+                log "WARN" "Lựa chọn không hợp lệ: $choice"
+                ;;
+        esac
+    done
 }
 
 # ============================ TÌM KIẾM TỪ ANIDATA (@NiyakiPham QUẢN LÝ) ============================
@@ -1844,7 +1967,7 @@ play_anime_anidata() {
 
 # ============================ PHÁT VIDEO TỪ URL TRỰC TIẾP ============================
 play_from_url() {
-    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập URL anime (OPhim17, AniData hoặc YouTube): " url
+    read -r -p "${PRIMARY}${SYM_PROMPT}${NC} Nhập URL anime (OPhim17/KKPhim/AniData hoặc YouTube): " url
     log "USER" "Nhập URL trực tiếp" "$url"
     
     if [[ -z "$url" ]]; then
@@ -1856,6 +1979,9 @@ play_from_url() {
     if [[ "$url" == *"ophim17.cc"* ]]; then
         local anime_name=$(curl -s "$url" | pup 'h1 text{}' | tr -d '\n')
         play_anime_ophim17 "$url" "$anime_name"
+    elif [[ "$url" == *"kkphim.com"* ]]; then
+        local anime_name=$(curl -s "$url" | pup 'h1 text{}' | tr -d '\n')
+        play_anime_kkphim "$url" "$anime_name"
     elif [[ "$url" == *"youtube.com"* || "$url" == *"youtu.be"* ]]; then
         local video_title=$(yt-dlp --get-title "$url" 2>/dev/null || echo "YouTube Video")
         add_to_history "YouTube" "$video_title"
@@ -1902,7 +2028,7 @@ play_from_url() {
         warn "${SYM_WARNING} Vui lòng sử dụng tùy chọn tìm kiếm AniData thay vì nhập URL trực tiếp"
         log "WARN" "Nhập URL AniData trực tiếp"
     else
-        warn "${SYM_WARNING} URL không được hỗ trợ. Chỉ hỗ trợ OPhim17, AniData và YouTube."
+        warn "${SYM_WARNING} URL không được hỗ trợ. Chỉ hỗ trợ OPhim17, KKPhim, AniData và YouTube."
         log "WARN" "URL không được hỗ trợ: $url"
     fi
 }
@@ -2569,7 +2695,7 @@ main() {
         process_cli_arguments "$@"
     fi
     
-    # Xử lý các lệnh trực tiếp
+        # Xử lý các lệnh trực tiếp
     if [[ -n "$DIRECT_PLAY" ]]; then
         log "SYSTEM" "Phát trực tiếp: $DIRECT_PLAY"
         
@@ -2580,8 +2706,10 @@ main() {
             exit 0
         fi
         
-        # Nếu không có trên AniData, thử tìm trên OPhim17
+        # Nếu không có trên AniData, thử tìm trên OPhim17 hoặc KKPhim
         local anime_name_encoded=$(echo "$DIRECT_PLAY" | sed 's/ /+/g')
+        
+        # Thử tìm trên OPhim17 trước
         local anime_list=$(search_anime_ophim17 "$anime_name_encoded")
         
         if [[ -n "$anime_list" ]]; then
@@ -2591,34 +2719,23 @@ main() {
             play_anime_ophim17 "$anime_url" "$anime_name"
             exit 0
         else
-            error "${SYM_ERROR} Không tìm thấy anime '$DIRECT_PLAY'"
-            log "ERROR" "Không tìm thấy anime để phát trực tiếp: $DIRECT_PLAY"
-            exit 1
-        fi
-    fi
-    
-    if [[ -n "$DIRECT_SEARCH" ]]; then
-        log "SYSTEM" "Tìm kiếm trực tiếp: $DIRECT_SEARCH"
-        search_ophim17 "$DIRECT_SEARCH"
-        exit 0
-    fi
-    
-    if [[ -n "$DIRECT_DOWNLOAD" ]]; then
-        log "SYSTEM" "Tải trực tiếp: $DIRECT_DOWNLOAD"
-        
-        if [[ "$DIRECT_DOWNLOAD" == *"ophim17.cc"* ]]; then
-            local anime_name=$(curl -s "$DIRECT_DOWNLOAD" | pup 'h1 text{}' | tr -d '\n')
-            local episode_list=$(get_episode_list_ophim17 "$DIRECT_DOWNLOAD")
-            local first_episode=$(echo "$episode_list" | head -n 1)
-            local episode_url=$(echo "$first_episode" | cut -d'|' -f2)
+            # Nếu không có trên OPhim17, thử tìm trên KKPhim
+            local anime_list=$(search_anime_kkphim "$anime_name_encoded")
             
-            download_video "$episode_url" "$anime_name - Tập 1" "$DOWNLOAD_DIR/$anime_name" "$anime_name"
-            exit $?
-        else
-            download_video "$DIRECT_DOWNLOAD" "Video_$(date +%s)" "$DOWNLOAD_DIR" "Direct_Download"
-            exit $?
+            if [[ -n "$anime_list" ]]; then
+                local selected_anime=$(echo "$anime_list" | head -n 1)
+                local anime_url=$(echo "$selected_anime" | sed 's/.*(\(.*\))/\1/')
+                local anime_name=$(echo "$selected_anime" | sed 's/^[^(]*(\([^)]*\)) \+//;s/ ([^ ]*)$//')
+                play_anime_kkphim "$anime_url" "$anime_name"
+                exit 0
+            else
+                error "${SYM_ERROR} Không tìm thấy anime '$DIRECT_PLAY'"
+                log "ERROR" "Không tìm thấy anime để phát trực tiếp: $DIRECT_PLAY"
+                exit 1
+            fi
         fi
     fi
+    
     
     # Hiển thị thông báo khởi động
     show_header
