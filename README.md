@@ -27,7 +27,7 @@
 
 ### Cài đặt tự động
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/kidtomboy/Anisub/main/anisun.sh)
+bash <(curl -s https://raw.githubusercontent.com/kidtomboy/Anisub/main/anisub.sh)
 ```
 
 ### Cài đặt thủ công
@@ -183,6 +183,7 @@ sudo pacman -S mpv
 
 # Termux
 pkg install mpv-x
+... (hãy install những packages còn thiếu)
 ```
 
 ### 2. Lỗi kết nối
